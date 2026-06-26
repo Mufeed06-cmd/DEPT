@@ -3062,6 +3062,106 @@ def _help_card() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Query Preprocessor — typo correction, abbreviation expansion, alias normalise
+# ─────────────────────────────────────────────────────────────────────────────
+
+_TYPO_MAP = {
+    "artifical": "artificial", "artifcial": "artificial", "artiicial": "artificial",
+    "intelligance": "intelligence", "intelligense": "intelligence",
+    "machne": "machine", "machin": "machine", "mchine": "machine",
+    "learnng": "learning", "lerning": "learning", "learing": "learning",
+    "databse": "database", "dtabase": "database", "databas": "database",
+    "compter": "computer", "computr": "computer", "copmuter": "computer",
+    "engneering": "engineering", "engneer": "engineer", "engieneering": "engineering",
+    "pyhtон": "python", "pyhton": "python", "pythn": "python", "pyton": "python",
+    "fullstck": "fullstack", "fullstck": "full stack", "fullstac": "full stack",
+    "hostal": "hostel", "hostl": "hostel", "hstel": "hostel",
+    "libary": "library", "libarary": "library", "libray": "library",
+    "departmnt": "department", "deparment": "department", "dept ": "department ",
+    "placemnts": "placements", "placment": "placement",
+    "recrutiers": "recruiters", "recrutier": "recruiter",
+    "facilites": "facilities", "facilty": "facility",
+    "sciense": "science", "sceince": "science",
+    "prgramming": "programming", "porgramming": "programming",
+    "developmnt": "development", "devlopment": "development",
+    "analytcs": "analytics", "analytic": "analytics",
+    "semster": "semester", "smester": "semester",
+    "sylabbus": "syllabus", "sylabus": "syllabus",
+    "admision": "admission", "admssion": "admission",
+    "infomation": "information", "informaton": "information",
+    "acreditation": "accreditation", "accrediattion": "accreditation",
+    "affiliaton": "affiliation", "afiliation": "affiliation",
+    "specilization": "specialization", "specalisation": "specialization",
+}
+
+_ABBR_MAP = {
+    r'\bai\b':     "artificial intelligence",
+    r'\bml\b':     "machine learning",
+    r'\bdl\b':     "deep learning",
+    r'\bnlp\b':    "natural language processing",
+    r'\bcv\b':     "computer vision",
+    r'\brag\b':    "retrieval augmented generation",
+    r'\bmcp\b':    "model context protocol",
+    r'\baws\b':    "amazon web services",
+    r'\bdbms\b':   "database management systems",
+    r'\bdsa\b':    "data structures algorithms",
+    r'\boop\b':    "object oriented programming",
+    r'\bfsd\b':    "full stack development",
+    r'\bbda\b':    "big data analytics",
+    r'\bdwdm\b':   "data warehousing mining",
+    r'\bmlops\b':  "machine learning operations",
+    r'\bai&ds\b':  "artificial intelligence data science",
+    r'\baids\b':   "artificial intelligence data science",
+    r'\baiml\b':   "artificial intelligence machine learning",
+    r'\bcse\b':    "computer science engineering",
+    r'\bece\b':    "electronics communication engineering",
+    r'\beee\b':    "electrical electronics engineering",
+}
+
+_COLLEGE_ALIASES = {
+    "nbkr", "nbkrist", "nbkr college", "nbkr institute",
+    "n.b.k.r", "nbkr ist", "nbkr iot", "nbkr tech",
+}
+
+_DEPT_ALIAS_MAP = {
+    "aids":  "artificial intelligence data science",
+    "ai ds": "artificial intelligence data science",
+    "ai&ds": "artificial intelligence data science",
+    "aiml":  "artificial intelligence machine learning",
+    "ai&ml": "artificial intelligence machine learning",
+    "cse":   "computer science engineering",
+    "ece":   "electronics communication engineering",
+    "eee":   "electrical electronics engineering",
+    "mech":  "mechanical engineering",
+    "civil": "civil engineering",
+}
+
+
+def preprocess_query(query: str) -> str:
+    """
+    Apply typo correction + abbreviation expansion before routing.
+    Preserves original casing for display but returns lowercased expanded form.
+    """
+    q = query.lower().strip()
+
+    # 1. Fix typos (whole-word replacements)
+    for typo, correct in _TYPO_MAP.items():
+        q = re.sub(r'\b' + re.escape(typo) + r'\b', correct, q)
+
+    # 2. Expand department aliases
+    for alias, full in _DEPT_ALIAS_MAP.items():
+        q = re.sub(r'\b' + re.escape(alias) + r'\b', full, q)
+
+    # 3. Expand abbreviations (only when standalone)
+    for pattern, expansion in _ABBR_MAP.items():
+        # Skip if already expanded
+        if expansion not in q:
+            q = re.sub(pattern, expansion, q, flags=re.IGNORECASE)
+
+    return q.strip()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main response function
 # ─────────────────────────────────────────────────────────────────────────────
 def classify_query_module(query: str, qa: QueryAnalysis) -> str:
@@ -3214,8 +3314,11 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if not query:
         return _info_card("⚠️ Empty Query", [("Tip","Please type a question.")])
 
-    qa     = analyse_query(query)
-    intent = detect_intent(query, qa)
+    # ── Preprocess: fix typos + expand abbreviations ──────────────────────
+    expanded = preprocess_query(query)
+
+    qa     = analyse_query(expanded)
+    intent = detect_intent(expanded, qa)
 
     # ── Admin access intercept — before everything else ──────────────────
     if re.search(r'\badmin\b', query.lower()):
@@ -3266,36 +3369,36 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if intent == "help":
         return _help_card()
 
-    # Classify the target module
-    module = classify_query_module(query, qa)
-    
+    # Classify the target module — use expanded (typo-fixed) query
+    module = classify_query_module(expanded, qa)
+
     if module == "unknown":
         log_failed_query(query, "unknown", 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     # Route strictly to relevant data source
     if module == "student":
-        student_reply = handle_student_query(query)
+        student_reply = handle_student_query(expanded)
         if student_reply is not None:
             return student_reply
         log_failed_query(query, "student", 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "student_timetable":
-        return handle_student_timetable_query(query)
+        return handle_student_timetable_query(expanded)
 
     if module == "timetable":
         timetable_reply = handle_timetable_query(qa)
         if timetable_reply is not None:
             return timetable_reply
         log_failed_query(query, "timetable", 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "college":
-        return handle_college_query(query)
+        return handle_college_query(expanded)
 
     if module == "labs":
-        labs_reply = handle_labs_query(query)
+        labs_reply = handle_labs_query(expanded)
         if labs_reply is not None:
             return labs_reply
         log_failed_query(query, "labs", 0.0)
@@ -3305,27 +3408,24 @@ def get_response(query: str, conn_id: str = "default") -> str:
         return build_all_faculty_schedule_list_html()
 
     if module == "faculty_timetable":
-        # Find the faculty by name from the query
-        fac = _find_faculty_by_name(query)
+        fac = _find_faculty_by_name(expanded)
         if fac:
             tt = fac.get("timetable", {})
             if tt:
                 return build_faculty_timetable_html(fac)
         log_failed_query(query, "faculty_timetable", 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "faculty_leisure":
-        # Find the faculty by name from the query
-        fac = _find_faculty_by_name(query)
+        fac = _find_faculty_by_name(expanded)
         if fac:
             tt = fac.get("timetable", {})
             if tt:
                 return build_faculty_leisure_html(fac)
         log_failed_query(query, "faculty_leisure", 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "bus_fee":
-        # Search bus_fee documents in RAG
         results = retrieve_filtered(qa, "bus_fee")
         if results and results[0][1] >= CONFIDENCE_THRESHOLD:
             doc = results[0][0]
@@ -3334,25 +3434,22 @@ def get_response(query: str, conn_id: str = "default") -> str:
             route = doc.get("route", "")
             matches = [{"location": stop, "fee": fee, "route": route, "year": _BUS_YEAR}]
             return build_bus_fee_card(matches, stop)
-        
-        # If RAG did not match, fallback to dictionary search
+
         location = re.sub(
             r'\b(bus|fee|fees|fare|charge|charges|transport|transportation|'
             r'from|for|what|is|the|how|much|cost|amount|boarding|route|routes)\b',
-            '', query.lower(), flags=re.IGNORECASE
+            '', expanded, flags=re.IGNORECASE
         ).strip().strip('?').strip()
         if location:
             matches = _search_bus_fee(location)
             if matches:
-                # Top result only
                 return build_bus_fee_card([matches[0]], location)
-        
+
         log_failed_query(query, "bus_fee", results[0][1] if results else 0.0)
-        return "I don't know the answer to that question."
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "faculty":
-        # 1. HOD shortcut
-        if any(w in query.lower() for w in ["hod","head of department","head of dept"]):
+        if any(w in expanded for w in ["hod","head of department","head of dept"]):
             hod = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
             if hod: return build_faculty_card(hod)
 

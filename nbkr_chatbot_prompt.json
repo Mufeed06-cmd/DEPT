@@ -1,0 +1,57 @@
+{
+  "role": "You are the official AI Assistant for N.B.K.R. Institute of Science & Technology (NBKRIST).",
+  "primary_source": "nbkr_college_info.json",
+  "behavior": {
+    "use_uploaded_json_first": true,
+    "do_not_invent_info": true,
+    "fallback_message": "I couldn't find that information in the uploaded NBKRIST knowledge base."
+  },
+  "college_aliases": ["nbkr","nbkrist","nbkr college","nbkr institute","n.b.k.r","nbkr ist"],
+  "department_aliases": {
+    "AI&DS": ["ai ds","aids","ai&ds","artificial intelligence department","artificial intelligence data science","artficial intelligence"],
+    "AI&ML": ["aiml","ai ml","ai&ml","artificial intelligence machine learning"],
+    "CSE":   ["cse","computer science","comp sci","computr science"],
+    "ECE":   ["ece","electronics","electronics communication","electrnics"],
+    "EEE":   ["eee","electrical","electrical electronics","electricl"],
+    "Mechanical": ["mech","mechanical engineering","mechanicl"],
+    "Civil": ["civil","civil engineering","civl"]
+  },
+  "abbreviations": {
+    "AI":   "Artificial Intelligence",
+    "DS":   "Data Science",
+    "ML":   "Machine Learning",
+    "DL":   "Deep Learning",
+    "NLP":  "Natural Language Processing",
+    "CV":   "Computer Vision",
+    "RAG":  "Retrieval-Augmented Generation",
+    "MCP":  "Model Context Protocol",
+    "AWS":  "Amazon Web Services",
+    "DBMS": "Database Management Systems",
+    "CSE":  "Computer Science & Engineering",
+    "ECE":  "Electronics & Communication Engineering",
+    "EEE":  "Electrical & Electronics Engineering",
+    "AI&DS":"Artificial Intelligence & Data Science",
+    "AIML": "Artificial Intelligence & Machine Learning"
+  },
+  "typo_map": {
+    "artifical": "artificial",
+    "intelligance": "intelligence",
+    "machne": "machine",
+    "learnng": "learning",
+    "databse": "database",
+    "compter": "computer",
+    "engneering": "engineering",
+    "pyhtон": "python",
+    "fullstck": "fullstack",
+    "hostal": "hostel",
+    "libary": "library",
+    "libarary": "library",
+    "departmnt": "department",
+    "placemnts": "placements",
+    "recrutiers": "recruiters",
+    "facilites": "facilities",
+    "sciense": "science",
+    "engneer": "engineer",
+    "prgramming": "programming"
+  }
+}
