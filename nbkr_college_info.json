@@ -1,0 +1,104 @@
+{
+  "college": {
+    "name": "N.B.K.R. Institute of Science & Technology",
+    "short_name": "NBKRIST",
+    "established": 1979,
+    "location": {
+      "village": "Vidyanagar",
+      "district": "Tirupati",
+      "state": "Andhra Pradesh",
+      "country": "India"
+    },
+    "affiliation": "Jawaharlal Nehru Technological University Anantapur (JNTUA)",
+    "autonomous_status": true,
+    "approvals": {
+      "aicte": true,
+      "ugc": true,
+      "ugc_recognition": "College with Potential for Excellence (CPE)"
+    },
+    "accreditation": {
+      "naac": { "grade": "A" },
+      "nba": { "status": "Accredited", "type": "Tier-1", "programs": "All B.Tech Programs" }
+    },
+    "vision": "To produce technically competent, ethical, innovative, and socially responsible engineers who contribute to industry and society."
+  },
+  "programs_offered": {
+    "undergraduate": [
+      "Artificial Intelligence & Data Science (AI&DS)",
+      "Artificial Intelligence & Machine Learning (AI&ML)",
+      "Computer Science & Engineering (CSE)",
+      "Electronics & Communication Engineering (ECE)",
+      "Electrical & Electronics Engineering (EEE)",
+      "Mechanical Engineering",
+      "Civil Engineering"
+    ],
+    "postgraduate": ["M.Tech", "MBA", "MCA", "Diploma Programs"]
+  },
+  "campus": {
+    "campus_area": "250+ Acres",
+    "facilities": [
+      "Wi-Fi Enabled Campus", "Modern Laboratories", "Digital Classrooms",
+      "Central Library", "44000+ Books", "Hostels", "Transportation",
+      "Sports Complex", "Gymnasium", "Open Air Auditorium",
+      "Innovation & Incubation Center", "Bank", "ATM", "Cafeteria", "Health Center"
+    ]
+  },
+  "student_chapters": [
+    "IEEE", "CSI", "ISTE", "IETE", "IEI", "SAE", "NSS", "NCC",
+    "Coding Club", "Language Club", "Cultural Club", "Literary Club",
+    "Yoga Club", "Painting Club"
+  ],
+  "placements": {
+    "major_recruiters": [
+      "Tata Consultancy Services (TCS)", "Infosys", "Wipro", "Cognizant",
+      "Mphasis", "Reliance Industries", "ValueLabs", "Sutherland", "Axis Bank"
+    ],
+    "placement_focus": [
+      "Coding Skills", "Communication Skills", "Internships",
+      "Aptitude Training", "Industry-Oriented Training"
+    ]
+  },
+  "department": {
+    "name": "Artificial Intelligence & Data Science",
+    "short_name": "AI&DS",
+    "overview": "The department focuses on Artificial Intelligence, Machine Learning, Data Science, Analytics, and modern software technologies.",
+    "approved_intake": 240,
+    "objectives": [
+      "Build Strong Programming Skills", "Teach AI Algorithms",
+      "Develop Data Analytics Expertise", "Improve Communication Skills",
+      "Encourage Innovation", "Promote Research", "Prepare Students for Industry Careers"
+    ],
+    "subjects": [
+      "Python Programming", "C Programming", "Data Structures",
+      "Database Management Systems", "Operating Systems", "Computer Networks",
+      "Artificial Intelligence", "Machine Learning", "Deep Learning",
+      "Data Science", "Big Data Analytics", "Data Mining",
+      "Natural Language Processing", "Computer Vision", "Cloud Computing",
+      "Full Stack Development", "Generative AI", "MLOps"
+    ],
+    "laboratories": [
+      "Programming Lab", "Python Lab", "Data Structures Lab", "DBMS Lab",
+      "Machine Learning Lab", "Artificial Intelligence Lab", "Deep Learning Lab",
+      "Data Analytics Lab", "Cloud Computing Lab", "Full Stack Development Lab"
+    ],
+    "career_opportunities": [
+      "AI Engineer", "Machine Learning Engineer", "Data Scientist", "Data Analyst",
+      "Business Intelligence Analyst", "Computer Vision Engineer",
+      "Natural Language Processing Engineer", "MLOps Engineer",
+      "Full Stack Developer", "Cloud Engineer", "Software Engineer", "Research Engineer"
+    ],
+    "recommended_skills": [
+      "Python", "SQL", "Git", "GitHub", "HTML", "CSS", "JavaScript",
+      "React", "Node.js", "FastAPI", "Machine Learning", "Deep Learning",
+      "Prompt Engineering", "Retrieval-Augmented Generation (RAG)",
+      "Model Context Protocol (MCP)", "LangChain", "Vector Databases",
+      "Docker", "Kubernetes", "AWS", "Linux"
+    ]
+  },
+  "events_and_activities": [
+    "Technical Symposiums", "Techvyuha", "Inspiron", "Coding Competitions",
+    "Hackathons", "Paper Presentations", "Workshops",
+    "Faculty Development Programs", "Industrial Visits",
+    "Placement Training", "Internship Drives"
+  ]
+}

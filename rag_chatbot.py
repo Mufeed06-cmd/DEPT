@@ -572,6 +572,19 @@ _TRAIN_DATA = [
     ("tell me about nbkr", "general"), ("about the college", "general"),
     ("nbkr institute", "general"), ("what is nbkr", "general"),
     ("college information", "general"), ("department info", "general"),
+    # college info
+    ("about nbkr", "college"), ("nbkr college", "college"),
+    ("nbkrist", "college"), ("naac grade", "college"),
+    ("nba accreditation", "college"), ("college established", "college"),
+    ("programs offered", "college"), ("campus facilities", "college"),
+    ("placement companies", "college"), ("major recruiters", "college"),
+    ("career opportunities", "college"), ("recommended skills", "college"),
+    ("department overview", "college"), ("ai&ds overview", "college"),
+    ("college events", "college"), ("student chapters", "college"),
+    ("what clubs", "college"), ("techvyuha", "college"),
+    ("inspiron", "college"), ("college labs", "college"),
+    ("intake", "college"), ("college vision", "college"),
+    ("affiliation", "college"), ("autonomous college", "college"),
     # student
     ("student info", "student"), ("student details", "student"),
     ("roll number", "student"), ("roll no", "student"),
@@ -2356,154 +2369,156 @@ def parse_timetable_query(qa: QueryAnalysis) -> Dict:
 
 def build_yearwise_timetable_overview() -> str:
     """
-    Build a year-wise timetable index exactly matching the hand-drawn format:
-    Rows = 1st / 2nd / 3rd / 4th Year
-    Cols = Section A / B / C / D
-    Each cell shows the section label and clicking it expands to the full week table.
+    Mobile-first year-wise timetable index.
+    Each year = one row with a coloured label + section buttons side by side.
+    No horizontal scroll — fits any screen width.
     """
     tt = _TT_DATA.get("timetable", {})
 
     YEAR_CONFIG = [
         {
             "label": "1st Year",
-            "icon": "🔵",
-            "grad": "linear-gradient(135deg,#1a237e,#283593)",
-            "sections": ["A", "B", "C", "D"],
+            "short": "1st",
+            "grad":  "linear-gradient(135deg,#1a237e,#3949ab)",
+            "light": "#e8eaf6",
+            "text":  "#1a237e",
+            "sections": ["A","B","C","D"],
             "key_fn": lambda s: f"1st_Year_Section_{s}",
         },
         {
             "label": "2nd Year",
-            "icon": "🟢",
-            "grad": "linear-gradient(135deg,#1b5e20,#2e7d32)",
-            "sections": ["A", "B"],
+            "short": "2nd",
+            "grad":  "linear-gradient(135deg,#1b5e20,#388e3c)",
+            "light": "#e8f5e9",
+            "text":  "#1b5e20",
+            "sections": ["A","B"],
             "key_fn": lambda s: f"2nd_Year_Section_{s}",
         },
         {
             "label": "3rd Year",
-            "icon": "🟠",
-            "grad": "linear-gradient(135deg,#e65100,#bf360c)",
-            "sections": ["A", "B"],
+            "short": "3rd",
+            "grad":  "linear-gradient(135deg,#bf360c,#e64a19)",
+            "light": "#fbe9e7",
+            "text":  "#bf360c",
+            "sections": ["A","B"],
             "key_fn": lambda s: f"3rd_Year_Section_{s}",
         },
         {
             "label": "4th Year",
-            "icon": "🟣",
-            "grad": "linear-gradient(135deg,#4a148c,#6a1b9a)",
+            "short": "4th",
+            "grad":  "linear-gradient(135deg,#4a148c,#7b1fa2)",
+            "light": "#f3e5f5",
+            "text":  "#4a148c",
             "sections": ["A"],
             "key_fn": lambda s: f"4th_Year_Section_{s}",
         },
     ]
 
-    # ── Header row ──────────────────────────────────────────────────────────
-    th_base = ('style="border:2px solid #fff;padding:11px 18px;text-align:center;'
-               'font-size:13px;font-weight:700;background:#2d3a6b;color:#fff;'
-               'letter-spacing:.03em;min-width:120px"')
-    header_cells = (
-        f'<th {th_base}>Year</th>'
-        + ''.join(
-            f'<th {th_base}>Section {sec}</th>'
-            for sec in ["A", "B", "C", "D"]
-        )
-    )
-    header_row = f'<tr>{header_cells}</tr>'
+    ALL_SECTIONS = ["A","B","C","D"]
 
-    # ── Year rows ────────────────────────────────────────────────────────────
-    body_rows = ""
+    rows_html = ""
     for yr in YEAR_CONFIG:
-        year_label = yr["label"]
-        grad       = yr["grad"]
-        icon       = yr["icon"]
-        key_fn     = yr["key_fn"]
-        avail_secs = yr["sections"]
+        avail  = yr["sections"]
+        grad   = yr["grad"]
+        light  = yr["light"]
+        color  = yr["text"]
+        key_fn = yr["key_fn"]
+        label  = yr["label"]
+        short  = yr["short"]
 
-        # Year label cell (left column, dark gradient bg)
-        year_cell = (
-            f'<td style="border:2px solid #fff;padding:14px 16px;'
-            f'background:{grad};color:#fff;font-weight:700;'
-            f'font-size:13px;text-align:center;vertical-align:middle;'
-            f'white-space:nowrap;min-width:110px">'
-            f'{icon} {year_label}</td>'
-        )
+        # Section buttons
+        btn_cells = ""
+        for sec in ALL_SECTIONS:
+            key      = key_fn(sec)
+            has_data = sec in avail and key in tt and bool(tt[key])
 
-        section_cells = ""
-        for sec in ["A", "B", "C", "D"]:
-            if sec not in avail_secs:
-                # Section not available for this year
-                section_cells += (
-                    '<td style="border:2px solid #fff;padding:12px;'
-                    'background:#f5f5f5;text-align:center;color:#bbb;'
-                    'font-size:12px;font-style:italic">—</td>'
-                )
-            else:
-                key = key_fn(sec)
-                has_data = key in tt and bool(tt[key])
-                if has_data:
-                    # Count total periods for a quick summary
-                    total_periods = sum(
-                        len(periods) for periods in tt[key].values()
-                    )
-                    # Primary subject from Monday (first entry)
-                    mon = tt[key].get("Monday", {})
-                    sample_subj = next(
-                        (v.split("(")[0].strip() for v in mon.values()
-                         if v.strip() not in _LUNCH_VALS and v.strip()),
-                        "View"
-                    )
-                    bg_cell   = "#e8f5e9" if sec in ("A","C") else "#e3f2fd"
-                    btn_grad  = grad
-                    section_cells += f"""
-<td style="border:2px solid #fff;padding:10px 8px;
-           background:{bg_cell};text-align:center;vertical-align:middle">
-  <div style="font-size:14px;font-weight:800;color:#1a237e;margin-bottom:4px">
-    Section {sec}
-  </div>
-  <div style="font-size:10px;color:#555;margin-bottom:8px">
-    {year_label} · {total_periods} slots
-  </div>
-  <button onclick="quickSend('{year_label} Section {sec} timetable')"
-     style="background:{btn_grad};color:#fff;border:none;
-            padding:6px 14px;border-radius:16px;font-size:11px;
-            font-weight:700;cursor:pointer;white-space:nowrap;
-            box-shadow:0 2px 4px rgba(0,0,0,.2);
-            transition:transform .15s,opacity .15s"
-     onmouseover="this.style.opacity='.85'"
-     onmouseout="this.style.opacity='1'">
-    📅 View Timetable
+            if has_data:
+                btn_cells += f"""
+<div style="flex:1;min-width:0;padding:3px">
+  <button onclick="quickSend('{label} Section {sec} timetable')"
+    style="width:100%;background:{grad};color:#fff;border:none;
+           border-radius:8px;padding:10px 4px;font-size:13px;
+           font-weight:700;cursor:pointer;line-height:1.3;
+           box-shadow:0 2px 6px rgba(0,0,0,.18);
+           transition:opacity .15s,transform .1s;
+           display:flex;flex-direction:column;align-items:center;gap:2px"
+    onmouseover="this.style.opacity='.82'"
+    onmouseout="this.style.opacity='1'"
+    ontouchstart="this.style.opacity='.75'"
+    ontouchend="this.style.opacity='1'">
+    <span style="font-size:15px">Sec {sec}</span>
+    <span style="font-size:9px;opacity:.85;font-weight:500">View →</span>
   </button>
-</td>"""
-                else:
-                    section_cells += (
-                        '<td style="border:2px solid #fff;padding:12px;'
-                        'background:#fff8e1;text-align:center;color:#999;'
-                        'font-size:12px;font-style:italic">Not available</td>'
-                    )
+</div>"""
+            else:
+                btn_cells += f"""
+<div style="flex:1;min-width:0;padding:3px">
+  <div style="width:100%;background:#f0f0f0;border-radius:8px;
+              padding:10px 4px;text-align:center;
+              font-size:13px;color:#ccc;font-weight:600;
+              box-sizing:border-box">
+    Sec {sec}
+  </div>
+</div>"""
 
-        body_rows += f'<tr>{year_cell}{section_cells}</tr>'
+        rows_html += f"""
+<div style="display:flex;align-items:stretch;gap:0;
+            border-bottom:2px solid #fff;background:#fff">
 
-    # ── Quick-tip row ────────────────────────────────────────────────────────
-    tip_row = (
-        '<tr><td colspan="5" style="padding:10px 16px;background:#f0f4ff;'
-        'font-size:11.5px;color:#555;text-align:center;border-top:2px solid #ddd">'
-        '💡 Click <b>"View Timetable"</b> to see the full weekly schedule for any section, '
-        'or ask directly — e.g. <i>"2nd year Section A timetable"</i>'
-        '</td></tr>'
-    )
+  <!-- Year label -->
+  <div style="background:{grad};color:#fff;
+              min-width:52px;max-width:52px;width:52px;
+              display:flex;align-items:center;justify-content:center;
+              flex-direction:column;gap:2px;padding:10px 4px;
+              border-radius:0;flex-shrink:0">
+    <span style="font-size:16px;font-weight:800;line-height:1">{short}</span>
+    <span style="font-size:9px;font-weight:500;opacity:.85">Year</span>
+  </div>
+
+  <!-- Section buttons -->
+  <div style="flex:1;display:flex;align-items:center;
+              padding:6px 6px;background:{light};gap:0">
+    {btn_cells}
+  </div>
+
+</div>"""
 
     return f"""
-<div style="margin:8px 0;font-family:'Segoe UI',Arial,sans-serif">
+<div style="margin:6px 0;font-family:'Segoe UI',Arial,sans-serif;
+            max-width:480px;width:100%;box-sizing:border-box">
+
+  <!-- Header -->
   <div style="background:linear-gradient(135deg,#2d3a6b,#4a5568);color:#fff;
-              padding:12px 18px;border-radius:10px 10px 0 0;
+              padding:10px 14px;border-radius:10px 10px 0 0;
               display:flex;justify-content:space-between;align-items:center">
-    <span style="font-size:15px;font-weight:700">📅 AI &amp; DS — Year-wise Timetable Index</span>
-    <span style="font-size:11px;opacity:.8">All Years · All Sections</span>
+    <span style="font-size:14px;font-weight:700">📅 Timetable — All Years</span>
+    <span style="font-size:10px;opacity:.8">AI &amp; DS Dept</span>
   </div>
-  <div style="overflow-x:auto;border:1px solid #bbb;border-top:none;
-              border-radius:0 0 10px 10px;background:#fff">
-    <table style="width:100%;border-collapse:collapse;min-width:560px">
-      <thead>{header_row}</thead>
-      <tbody>{body_rows}{tip_row}</tbody>
-    </table>
+
+  <!-- Column headers -->
+  <div style="display:flex;background:#2d3a6b;border-left:none">
+    <div style="min-width:52px;max-width:52px;width:52px;
+                padding:6px 4px;text-align:center;
+                font-size:10px;font-weight:700;color:#aab;flex-shrink:0">
+      Year
+    </div>
+    <div style="flex:1;display:flex">
+      {''.join(f'<div style="flex:1;text-align:center;padding:6px 2px;font-size:11px;font-weight:700;color:#fff">Sec {s}</div>' for s in ALL_SECTIONS)}
+    </div>
   </div>
+
+  <!-- Year rows -->
+  <div style="border:1px solid #ddd;border-top:none;
+              border-radius:0 0 10px 10px;overflow:hidden">
+    {rows_html}
+  </div>
+
+  <!-- Tip -->
+  <div style="margin-top:8px;padding:8px 12px;background:#f0f4ff;
+              border-radius:8px;font-size:11px;color:#555;text-align:center">
+    💡 Tap a section button to view its full weekly timetable
+  </div>
+
 </div>"""
 
 
@@ -3017,15 +3032,18 @@ def _info_card(title: str, rows: List[Tuple[str,str]]) -> str:
 
 def _help_card() -> str:
     rows = [
-        ("📅 Timetables",  "1st/2nd/3rd Year Section A/B/C/D weekly schedules"),
-        ("👥 Faculty",     "Names, designations, specializations, qualifications"),
-        ("📢 Circulars",   "Notices, announcements, fee circulars — try: 'show circulars'"),
-        ("💻 Services",    "Attendance, e-journals, assessments, portal login"),
-        ("📚 Academics",   "Courses, admissions, exams, library, hostel"),
-        ("🏢 About NBKR",  "Institute overview, departments, facilities"),
-        ("🎓 Students",    "Roll number lookup, section/branch/CGPA search — try: '23KB1A3062'"),
-        ("📖 Curriculum",  "Subjects by year/semester — try: '2nd year sem 2 subjects'"),
-        ("🚌 Bus Fees",    "Fee by location — try: 'bus fee for Nellore' or 'bus fee from Gudur'"),
+        ("📅 Timetables",  '1st/2nd/3rd Year Section A/B/C/D weekly schedules — try: "all timetables"'),
+        ("👥 Faculty",     'Names, designations, qualifications — try: "Who is the HOD?"'),
+        ("📢 Circulars",   'Notices, fee circulars — try: "show circulars"'),
+        ("💻 Services",    'Attendance, e-journals, portal login'),
+        ("🏛️ College",     'About NBKRIST, NAAC, NBA, programs — try: "about nbkr"'),
+        ("🤖 Department",  'AI&DS overview, subjects, labs, careers — try: "department overview"'),
+        ("💼 Placements",  'Recruiters, companies — try: "placement companies"'),
+        ("🛠️ Skills",      'Recommended tech stack — try: "recommended skills"'),
+        ("🎉 Events",      'Techvyuha, Inspiron, Hackathons — try: "college events"'),
+        ("👥 Clubs",       'IEEE, NSS, NCC, Coding Club — try: "student chapters"'),
+        ("🎓 Students",    'Roll lookup, CGPA, section — try: "23KB1A3062"'),
+        ("🚌 Bus Fees",    'Fee by location — try: "bus fee from Nellore"'),
     ]
     return _info_card("💡 What I can help you with", rows)
 
@@ -3112,6 +3130,20 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     department_keywords = ["department", "dept", "vision", "mission", "peo", "pso", "outcomes", "objectives", "about department", "about the department", "hod message", "message from hod"]
     if any(w in q for w in department_keywords):
         return "department"
+
+    # 5b. College Info Check
+    college_kw = [
+        "nbkr", "nbkrist", "college", "institute", "naac", "nba", "aicte", "ugc",
+        "established", "affiliation", "jntua", "autonomous", "accreditation",
+        "campus", "facilit", "hostel", "library", "placement", "recruiter",
+        "program", "course", "undergraduate", "postgraduate", "btech", "b.tech",
+        "career", "opportunit", "skill", "technolog", "stack", "lab", "laborator",
+        "event", "activit", "techvyuha", "inspiron", "hackathon", "chapter",
+        "club", "ieee", "nss", "ncc", "vision", "mission", "about college",
+        "about nbkr", "intake", "ai&ds department", "aids department"
+    ]
+    if any(w in q for w in college_kw):
+        return "college"
 
     # 6. Circulars Check
     if any(w in q for w in ["circular", "notice", "announcement", "latest notice"]):
@@ -3233,6 +3265,9 @@ def get_response(query: str, conn_id: str = "default") -> str:
             return timetable_reply
         log_failed_query(query, "timetable", 0.0)
         return "I don't know the answer to that question."
+
+    if module == "college":
+        return handle_college_query(query)
 
     if module == "faculty_timetable_list":
         return build_all_faculty_schedule_list_html()
@@ -3402,6 +3437,7 @@ async def lifespan(app: FastAPI):
     load_placements()
     load_events()
     load_dept_info()
+    load_college_info()
     load_subjects_list()
     _load_student_dw()
     ok = initialize_rag()
@@ -4765,6 +4801,235 @@ def load_dept_info():
         with open("nbkr_department_info.json","r",encoding="utf-8") as f:
             _DEPT_INFO = json.load(f)
         print("✓ Department info loaded")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# College Info — load & respond
+# ─────────────────────────────────────────────────────────────────────────────
+_COLLEGE_INFO: Dict = {}
+
+def load_college_info():
+    global _COLLEGE_INFO
+    if os.path.exists("nbkr_college_info.json"):
+        with open("nbkr_college_info.json", "r", encoding="utf-8") as f:
+            _COLLEGE_INFO = json.load(f)
+        print("✓ College info loaded")
+    else:
+        print("⚠ nbkr_college_info.json not found")
+
+
+def _pill(text, bg="#e8eaf6", fg="#1a237e"):
+    return (f'<span style="display:inline-block;background:{bg};color:{fg};'
+            f'padding:2px 9px;border-radius:10px;font-size:11.5px;'
+            f'font-weight:600;margin:2px 3px 2px 0">{text}</span>')
+
+
+def _section_title(icon, title):
+    return (f'<div style="padding:8px 14px 4px;font-size:11px;font-weight:700;'
+            f'color:#888;text-transform:uppercase;letter-spacing:.05em;'
+            f'border-top:1px solid #f0f0f0;margin-top:2px">{icon} {title}</div>')
+
+
+def _kv_row(label, value, hi=False):
+    bg = "background:#f8f9ff;" if hi else ""
+    return (f'<div style="display:flex;align-items:flex-start;gap:8px;'
+            f'padding:8px 14px;{bg}">'
+            f'<span style="min-width:150px;font-size:11px;font-weight:700;'
+            f'color:#888;text-transform:uppercase;letter-spacing:.03em;'
+            f'padding-top:1px;flex-shrink:0">{label}</span>'
+            f'<span style="font-size:13px;color:#222;line-height:1.6;'
+            f'word-break:break-word">{value}</span></div>')
+
+
+def build_college_info_card(section: str = "overview") -> str:
+    """
+    Build a rich HTML card for any section of college info.
+    section: overview | programs | campus | placements | department |
+             events | skills | careers | labs | chapters
+    """
+    ci = _COLLEGE_INFO
+    if not ci:
+        return '<p style="font-family:Segoe UI,sans-serif;color:#c62828">College info not loaded.</p>'
+
+    col  = ci.get("college", {})
+    dept = ci.get("department", {})
+    camp = ci.get("campus", {})
+    plac = ci.get("placements", {})
+    prog = ci.get("programs_offered", {})
+    evts = ci.get("events_and_activities", [])
+    chap = ci.get("student_chapters", [])
+
+    s = section.lower()
+
+    # ── Overview ─────────────────────────────────────────────────────────────
+    if s in ("overview", "about", "college", "nbkr", "general", "info"):
+        loc  = col.get("location", {})
+        acc  = col.get("accreditation", {})
+        naac = acc.get("naac", {}).get("grade", "—")
+        nba  = acc.get("nba", {}).get("type", "—")
+        body = (
+            _kv_row("Full Name",    col.get("name","—"), hi=True)
+          + _kv_row("Established",  str(col.get("established","—")))
+          + _kv_row("Location",     f'{loc.get("village","")}, {loc.get("district","")}, {loc.get("state","")}', hi=True)
+          + _kv_row("Affiliation",  col.get("affiliation","—"))
+          + _kv_row("Autonomous",   "✅ Yes" if col.get("autonomous_status") else "No", hi=True)
+          + _kv_row("NAAC Grade",   _pill(f"Grade {naac}", "#e8f5e9", "#1b5e20"))
+          + _kv_row("NBA",          _pill(nba, "#e3f2fd", "#0d47a1"), hi=True)
+          + _kv_row("UGC Status",   col.get("approvals",{}).get("ugc_recognition","—"))
+          + _section_title("🎯","Vision")
+          + f'<div style="padding:8px 14px 12px;font-size:13px;color:#444;'
+            f'font-style:italic;line-height:1.7">{col.get("vision","")}</div>'
+        )
+        title = f"🏛️ {col.get('name','NBKRIST')}"
+
+    # ── Programs ─────────────────────────────────────────────────────────────
+    elif s in ("programs", "courses", "ug", "pg", "undergraduate", "postgraduate"):
+        ug_pills = "".join(_pill(p, "#e3f2fd", "#0d47a1") for p in prog.get("undergraduate", []))
+        pg_pills = "".join(_pill(p, "#f3e5f5", "#4a148c") for p in prog.get("postgraduate", []))
+        body = (
+            _section_title("🎓", "Undergraduate Programs")
+          + f'<div style="padding:6px 14px 10px">{ug_pills}</div>'
+          + _section_title("📚", "Postgraduate Programs")
+          + f'<div style="padding:6px 14px 10px">{pg_pills}</div>'
+        )
+        title = "📋 Programs Offered at NBKRIST"
+
+    # ── Campus / Facilities ───────────────────────────────────────────────────
+    elif s in ("campus", "facilities", "infrastructure", "hostel", "library"):
+        fac_pills = "".join(_pill(f, "#e8f5e9", "#1b5e20") for f in camp.get("facilities", []))
+        body = (
+            _kv_row("Campus Area", camp.get("campus_area","—"), hi=True)
+          + _section_title("🏢","Facilities")
+          + f'<div style="padding:6px 14px 12px">{fac_pills}</div>'
+        )
+        title = "🏫 Campus & Facilities"
+
+    # ── Placements ───────────────────────────────────────────────────────────
+    elif s in ("placements", "recruiters", "companies", "jobs", "hiring"):
+        rec_pills  = "".join(_pill(r, "#fff3e0", "#e65100") for r in plac.get("major_recruiters", []))
+        focus_pills= "".join(_pill(f, "#e8eaf6", "#1a237e") for f in plac.get("placement_focus", []))
+        body = (
+            _section_title("🏢","Major Recruiters")
+          + f'<div style="padding:6px 14px 10px">{rec_pills}</div>'
+          + _section_title("🎯","Placement Focus Areas")
+          + f'<div style="padding:6px 14px 12px">{focus_pills}</div>'
+        )
+        title = "💼 Placements & Recruiters"
+
+    # ── Department Overview ───────────────────────────────────────────────────
+    elif s in ("department", "ai&ds", "aids", "dept"):
+        obj_items = "".join(
+            f'<div style="display:flex;gap:8px;padding:3px 0">'
+            f'<span style="color:#1a237e;flex-shrink:0">▸</span>'
+            f'<span style="font-size:12.5px;color:#333">{o}</span></div>'
+            for o in dept.get("objectives", [])
+        )
+        body = (
+            _kv_row("Department", dept.get("name","—"), hi=True)
+          + _kv_row("Intake",     str(dept.get("approved_intake","—")))
+          + _kv_row("Overview",   dept.get("overview","—"), hi=True)
+          + _section_title("🎯","Objectives")
+          + f'<div style="padding:6px 14px 12px">{obj_items}</div>'
+        )
+        title = f"🤖 AI & DS Department"
+
+    # ── Subjects ─────────────────────────────────────────────────────────────
+    elif s in ("subjects", "syllabus", "curriculum dept"):
+        sub_pills = "".join(_pill(s, "#e3f2fd", "#0d47a1") for s in dept.get("subjects", []))
+        body = (
+            _section_title("📖","Subjects Taught in AI & DS")
+          + f'<div style="padding:6px 14px 12px">{sub_pills}</div>'
+        )
+        title = "📖 AI & DS — Subjects"
+
+    # ── Labs ─────────────────────────────────────────────────────────────────
+    elif s in ("labs", "laboratories", "lab"):
+        lab_pills = "".join(_pill(l, "#e8f5e9", "#1b5e20") for l in dept.get("laboratories", []))
+        body = (
+            _section_title("🔬","Laboratories in AI & DS")
+          + f'<div style="padding:6px 14px 12px">{lab_pills}</div>'
+        )
+        title = "🔬 AI & DS — Laboratories"
+
+    # ── Career Opportunities ─────────────────────────────────────────────────
+    elif s in ("careers", "career", "jobs", "opportunities", "roles"):
+        car_pills = "".join(_pill(c, "#fce4ec", "#880e4f") for c in dept.get("career_opportunities", []))
+        body = (
+            _section_title("💼","Career Opportunities for AI & DS Graduates")
+          + f'<div style="padding:6px 14px 12px">{car_pills}</div>'
+        )
+        title = "💼 Career Opportunities"
+
+    # ── Recommended Skills ────────────────────────────────────────────────────
+    elif s in ("skills", "recommended", "technologies", "tech stack", "stack"):
+        sk_pills = "".join(_pill(sk, "#e8eaf6", "#1a237e") for sk in dept.get("recommended_skills", []))
+        body = (
+            _section_title("🛠️","Recommended Skills for AI & DS Students")
+          + f'<div style="padding:6px 14px 12px">{sk_pills}</div>'
+        )
+        title = "🛠️ Recommended Skills"
+
+    # ── Events ───────────────────────────────────────────────────────────────
+    elif s in ("events", "activities", "fest", "techvyuha", "inspiron", "hackathon"):
+        ev_pills = "".join(_pill(e, "#fff8e1", "#f57f17") for e in evts)
+        body = (
+            _section_title("🎉","Events & Activities")
+          + f'<div style="padding:6px 14px 12px">{ev_pills}</div>'
+        )
+        title = "🎉 Events & Activities"
+
+    # ── Student Chapters ─────────────────────────────────────────────────────
+    elif s in ("chapters", "clubs", "student chapters", "ieee", "nss", "ncc"):
+        ch_pills = "".join(_pill(c, "#f3e5f5", "#4a148c") for c in chap)
+        body = (
+            _section_title("👥","Student Chapters & Clubs")
+          + f'<div style="padding:6px 14px 12px">{ch_pills}</div>'
+        )
+        title = "👥 Student Chapters & Clubs"
+
+    # ── Default: full overview ────────────────────────────────────────────────
+    else:
+        return build_college_info_card("overview")
+
+    return f"""
+<div style="margin:8px 0;font-family:'Segoe UI',Arial,sans-serif;max-width:520px">
+  <div style="background:linear-gradient(135deg,#1a237e,#283593);color:#fff;
+              padding:11px 16px;border-radius:10px 10px 0 0">
+    <span style="font-size:14px;font-weight:700">{title}</span>
+  </div>
+  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;
+              border-radius:0 0 10px 10px;overflow:hidden">
+    {body}
+  </div>
+</div>"""
+
+
+def handle_college_query(query: str) -> str:
+    """Route college info queries to the right section card."""
+    q = query.lower()
+
+    if any(w in q for w in ["program","course","undergraduate","postgraduate","ug","pg","b.tech","btech","m.tech","mba","mca"]):
+        return build_college_info_card("programs")
+    if any(w in q for w in ["campus","facilit","infrastructure","hostel","library","gym","canteen","cafeteria","wi-fi","wifi","atm","bank"]):
+        return build_college_info_card("campus")
+    if any(w in q for w in ["placement","recruiter","company","compan","hiring","package","tcs","infosys","wipro","cognizant"]):
+        return build_college_info_card("placements")
+    if any(w in q for w in ["subject","syllabus","what do we study","what subjects"]):
+        return build_college_info_card("subjects")
+    if any(w in q for w in ["lab","laborator"]):
+        return build_college_info_card("labs")
+    if any(w in q for w in ["career","job","opportunit","role","engineer","scientist","analyst","developer"]):
+        return build_college_info_card("careers")
+    if any(w in q for w in ["skill","technolog","stack","python","react","docker","aws","langchain","rag","mcp"]):
+        return build_college_info_card("skills")
+    if any(w in q for w in ["event","activit","techvyuha","inspiron","hackathon","symposium","workshop","fest"]):
+        return build_college_info_card("events")
+    if any(w in q for w in ["chapter","club","ieee","nss","ncc","csi","iste","coding club","cultural"]):
+        return build_college_info_card("chapters")
+    if any(w in q for w in ["department","ai&ds","aids","ai ds","artificial intelligence data science","dept overview","dept objective"]):
+        return build_college_info_card("department")
+    # Default: college overview
+    return build_college_info_card("overview")
 
 @app.get("/admin/deptinfo/get")
 async def admin_deptinfo_get(request: Request):
