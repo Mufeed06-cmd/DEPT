@@ -64,5 +64,41 @@
     "query": "time tables",
     "classified_module": "timetable",
     "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T17:57:09.218357",
+    "query": "labs",
+    "classified_module": "unknown",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T18:02:17.108204",
+    "query": "students",
+    "classified_module": "student",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T18:02:23.898329",
+    "query": "students chapters",
+    "classified_module": "student",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T18:02:43.136195",
+    "query": "student chapters",
+    "classified_module": "student",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T18:02:57.128600",
+    "query": "about aids",
+    "classified_module": "unknown",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-06-26T18:03:03.932821",
+    "query": "department overview",
+    "classified_module": "department",
+    "top_score": 0.5783
   }
 ]

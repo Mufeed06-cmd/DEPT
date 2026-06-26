@@ -908,16 +908,5 @@
         "4:00-5:00": ""
       }
     }
-  },
-  {
-    "name": "srinu",
-    "designation": "Assistant Professor",
-    "Qualification": "btech",
-    "date_of_joining": "2005-07-01",
-    "phone": "7680925216",
-    "email": "23kb1a3080@nbkrist.org",
-    "specialization": "machine learning",
-    "experience": "2",
-    "timetable": []
   }
 ]
