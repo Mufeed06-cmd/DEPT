@@ -491,6 +491,8 @@ embeddings_model  = None
 faiss_index       = None
 doc_embeddings    = None   # precomputed document embeddings matrix
 knowledge_docs: List[Dict] = []
+bm25_index        = None   # BM25Okapi index over knowledge_docs
+bm25_tokenized_corpus: List[List[str]] = []
 nlp               = None   # spaCy
 ml_classifier     = None   # TF-IDF + Naive Bayes pipeline
 ml_vectorizer     = None
@@ -498,6 +500,10 @@ audit_file        = "admin_audit.json"
 
 CONFIDENCE_THRESHOLD = 0.70
 TOP_K = 1
+# Slightly more lenient threshold for the "unknown" fallback, since it's
+# searching across ALL document types (not a single filtered type), and
+# hybrid scores blend two different signals (vector + BM25).
+UNKNOWN_FALLBACK_THRESHOLD = 0.55
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1798,6 +1804,14 @@ def initialize_rag() -> bool:
         faiss_index = faiss.IndexFlatIP(dim)
         faiss_index.add(doc_embeddings)
         print(f"✓ FAISS index built  ({len(knowledge_docs)} vectors, dim={dim})")
+
+        # Build BM25 keyword index alongside the vector index
+        global bm25_index, bm25_tokenized_corpus
+        from rank_bm25 import BM25Okapi
+        bm25_tokenized_corpus = [re.findall(r'\w+', t.lower()) for t in texts]
+        bm25_index = BM25Okapi(bm25_tokenized_corpus)
+        print(f"✓ BM25 index built ({len(bm25_tokenized_corpus)} documents)")
+
         return True
     except Exception as e:
         print(f"⚠ FAISS failed: {e}"); return False
@@ -1833,6 +1847,36 @@ def retrieve_filtered(qa: QueryAnalysis, doc_type: str) -> List[Tuple[Dict, floa
         
     results.sort(key=lambda x: x[1], reverse=True)
     return results
+
+
+def hybrid_retrieve(qa: QueryAnalysis, top_k: int = TOP_K, alpha: float = 0.5) -> List[Tuple[Dict, float]]:
+    """
+    Combine BM25 keyword score + FAISS vector score into one ranked list.
+    alpha weights vector score vs keyword score (0.5 = equal weight).
+    Falls back to vector-only retrieve() if BM25 isn't available.
+    """
+    if bm25_index is None or embeddings_model is None or faiss_index is None:
+        return retrieve(qa, top_k)
+
+    search_text = qa.expanded if qa.expanded.strip() else qa.original
+    query_tokens = re.findall(r'\w+', search_text.lower())
+
+    # BM25 scores across ALL docs, normalized to 0-1
+    bm25_scores = bm25_index.get_scores(query_tokens)
+    max_bm25 = max(bm25_scores) if len(bm25_scores) and max(bm25_scores) > 0 else 1.0
+    bm25_scores_norm = [s / max_bm25 for s in bm25_scores]
+
+    # Vector scores across ALL docs (reuse doc_embeddings, already normalized)
+    q_vec = embeddings_model.encode([search_text], normalize_embeddings=True)[0]
+    vector_scores = doc_embeddings @ q_vec  # cosine similarity, already 0-1 range
+
+    combined = [
+        (i, alpha * float(vector_scores[i]) + (1 - alpha) * float(bm25_scores_norm[i]))
+        for i in range(len(knowledge_docs))
+    ]
+    combined.sort(key=lambda x: x[1], reverse=True)
+
+    return [(knowledge_docs[i], score) for i, score in combined[:top_k]]
 
 
 
@@ -3102,6 +3146,13 @@ def _info_card(title: str, rows: List[Tuple[str,str]]) -> str:
 </div>"""
 
 
+def _fallback_answer_card(doc: Dict) -> str:
+    """Generic card for displaying a hybrid-search match when no specific
+    rule-based handler matched the query."""
+    content = doc.get("display_text") or doc.get("text", "")
+    doc_type = doc.get("type", "information").replace("_", " ").title()
+    return _info_card(f"ℹ️ {doc_type} (Related Info)", [("Details", content)])
+
 def _help_card() -> str:
     rows = [
         ("📅 Timetables",  '1st/2nd/3rd Year Section A/B/C/D weekly schedules — try: "all timetables"'),
@@ -3130,6 +3181,46 @@ def _attendance_card() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # Query Preprocessor — typo correction, abbreviation expansion, alias normalise
 # ─────────────────────────────────────────────────────────────────────────────
+
+from rapidfuzz import fuzz, process as _rf_process
+
+# Known-good domain vocabulary the chatbot should recognize.
+# Fuzzy matching corrects misspellings of these words automatically —
+# no need to hand-write every typo variant.
+_DOMAIN_VOCAB = [
+    "attendance", "artificial", "intelligence", "machine", "learning",
+    "database", "computer", "engineering", "python", "fullstack",
+    "hostel", "library", "department", "placements", "placement",
+    "recruiters", "recruiter", "facilities", "facility", "science",
+    "programming", "development", "analytics", "semester", "syllabus",
+    "admission", "information", "accreditation", "affiliation",
+    "specialization", "timetable", "schedule", "faculty", "teacher",
+    "lecturer", "professor", "circular", "circulars", "curriculum",
+    "exam", "exams", "results", "marks", "grades", "cgpa", "sgpa",
+    "bus", "fee", "fees", "route", "stop", "lab", "labs", "project",
+    "projects", "internship", "internships", "workshop", "event",
+    "events", "notice", "notification", "contact", "email", "phone",
+    "qualification", "designation", "assistant", "associate",
+    "principal", "dean", "chairman", "college", "institute", "hod",
+    "scholarship", "scholarships", "eligibility", "counselling",
+    "rank", "seat", "vacancy", "free",
+]
+
+def fuzzy_correct_word(word: str, threshold: int = 80) -> str:
+    """Return the closest domain-vocab match for a misspelled word,
+    or the original word if nothing is close enough / already correct."""
+    if len(word) < 4 or word in _DOMAIN_VOCAB:
+        return word
+    match = _rf_process.extractOne(word, _DOMAIN_VOCAB, scorer=fuzz.ratio)
+    if match and match[1] >= threshold:
+        return match[0]
+    return word
+
+def fuzzy_correct_query(text: str) -> str:
+    """Run fuzzy spell-correction word-by-word over a query."""
+    words = text.split()
+    return " ".join(fuzzy_correct_word(w) for w in words)
+
 
 _TYPO_MAP = {
     "attendence": "attendance", "attendece": "attendance",
@@ -3203,6 +3294,16 @@ _DEPT_ALIAS_MAP = {
     "civil": "civil engineering",
 }
 
+# Casual/informal phrasing → canonical terms the router already recognizes.
+# This has nothing to do with department names — purely phrasing normalization.
+_QUERY_REWRITE_MAP = {
+    r'\b(mam|madam|maam)\b': 'faculty',
+    r'\bsir\b': 'faculty',
+    r'\btime\s+table\b': 'timetable',
+    r'\bfree\s*hrs?\b': 'free hours',
+    r'\bfree\s*periods?\b': 'free hours',
+}
+
 
 def preprocess_query(query: str) -> str:
     """
@@ -3211,9 +3312,12 @@ def preprocess_query(query: str) -> str:
     """
     q = query.lower().strip()
 
-    # 1. Fix typos (whole-word replacements)
+    # 1. Fix typos (whole-word replacements) — hand-written known typos first
     for typo, correct in _TYPO_MAP.items():
         q = re.sub(r'\b' + re.escape(typo) + r'\b', correct, q)
+
+    # 1b. Fuzzy-correct anything the fixed typo map missed
+    q = fuzzy_correct_query(q)
 
     # 2. Expand department aliases
     for alias, full in _DEPT_ALIAS_MAP.items():
@@ -3224,6 +3328,10 @@ def preprocess_query(query: str) -> str:
         # Skip if already expanded
         if expansion not in q:
             q = re.sub(pattern, expansion, q, flags=re.IGNORECASE)
+
+    # 4. Rewrite casual/informal phrasing to canonical router keywords
+    for pattern, replacement in _QUERY_REWRITE_MAP.items():
+        q = re.sub(pattern, replacement, q)
 
     return q.strip()
 
@@ -3468,7 +3576,11 @@ def get_response(query: str, conn_id: str = "default") -> str:
     module = classify_query_module(expanded, qa)
 
     if module == "unknown":
-        log_failed_query(query, "unknown", 0.0)
+        fallback_results = hybrid_retrieve(qa, top_k=3)
+        if fallback_results and fallback_results[0][1] >= UNKNOWN_FALLBACK_THRESHOLD:
+            best_doc, best_score = fallback_results[0]
+            return _fallback_answer_card(best_doc)
+        log_failed_query(query, "unknown", fallback_results[0][1] if fallback_results else 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     # Route strictly to relevant data source
@@ -3648,7 +3760,7 @@ def get_response(query: str, conn_id: str = "default") -> str:
         return "I don't know the answer to that question."
 
     if module == "general":
-        results = retrieve_filtered(qa, "general")
+        results = hybrid_retrieve(qa, top_k=TOP_K)
         if results and results[0][1] >= CONFIDENCE_THRESHOLD:
             doc = results[0][0]
             text = doc["text"]
