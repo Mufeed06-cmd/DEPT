@@ -2705,6 +2705,65 @@ def build_all_faculty_schedule_list_html() -> str:
 """
 
 
+def render_faculty_table(faculty_list: list) -> str:
+    """Render the canonical 3-column faculty overview table (Faculty name | Timetable | Leisure).
+    Works for a single faculty entry (single-row) or the full department roster (all rows).
+    Each row's buttons send quickSend messages that trigger the exact-phrase detail handlers.
+    """
+    header = (
+        '<div style="margin:8px 0;font-family:\'Segoe UI\',Arial,sans-serif" class="timetable-card-container">'
+        '<div style="background:linear-gradient(135deg,#2d3a6b,#4a5568);color:#fff;padding:12px 18px;'
+        'border-radius:8px 8px 0 0;display:flex;align-items:center">'
+        '<b style="font-size:14px">📋 Faculty Schedule Overview</b>'
+        '</div>'
+        '<div style="border:1px solid #bbb;border-top:none;border-radius:0 0 8px 8px;'
+        'background:#fff;overflow-x:auto">'
+        '<table style="width:100%;border-collapse:collapse;margin:0">'
+        '<thead>'
+        '<tr style="background:#f4f6fb">'
+        '<th style="padding:10px 14px;text-align:left;font-size:12px;color:#2d3a6b;'
+        'border-bottom:2px solid #e0e4f0;font-weight:700">Faculty Name</th>'
+        '<th style="padding:10px 14px;text-align:center;font-size:12px;color:#2d3a6b;'
+        'border-bottom:2px solid #e0e4f0;font-weight:700">Time Table View</th>'
+        '<th style="padding:10px 14px;text-align:center;font-size:12px;color:#2d3a6b;'
+        'border-bottom:2px solid #e0e4f0;font-weight:700">Leisure Periods View</th>'
+        '</tr>'
+        '</thead><tbody>'
+    )
+    rows = ""
+    for f in faculty_list:
+        name = f.get("name", "")
+        desig = f.get("designation", "")
+        desig_badge = (
+            f'<div style="font-size:11px;color:#7c3aed;margin-top:2px">'
+            f'{desig}</div>'
+        ) if desig else ""
+        tt_btn = (
+            f'<button onclick="quickSend(\'timetable of {name}\')" '
+            f'onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0" '
+            f'style="background:#2d3a6b;color:#fff;border:none;padding:7px 13px;'
+            f'border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;'
+            f'transition:opacity 0.2s">📅 View Timetable</button>'
+        )
+        lei_btn = (
+            f'<button onclick="quickSend(\'leisure hours of {name}\')" '
+            f'onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0" '
+            f'style="background:#7c3aed;color:#fff;border:none;padding:7px 13px;'
+            f'border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;'
+            f'transition:opacity 0.2s">🕐 View Leisure</button>'
+        )
+        rows += (
+            f'<tr style="border-bottom:1px solid #f0f0f0">'
+            f'<td style="padding:10px 14px;font-weight:600;color:#1a1a2e;font-size:13px">'
+            f'{name}{desig_badge}</td>'
+            f'<td style="padding:10px 14px;text-align:center">{tt_btn}</td>'
+            f'<td style="padding:10px 14px;text-align:center">{lei_btn}</td>'
+            f'</tr>'
+        )
+    footer = '</tbody></table></div></div>'
+    return header + rows + footer
+
+
 def build_faculty_leisure_html(faculty: Dict) -> str:
     """Identify and render leisure (free) hours for a faculty member."""
     name = faculty.get("name", "Faculty")
@@ -3175,44 +3234,64 @@ def preprocess_query(query: str) -> str:
 def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     q = query.lower().strip()
 
-    # 0a. Faculty Leisure Hours Check (must come BEFORE timetable/faculty checks)
-    leisure_kw = {"leisure", "free", "free period", "free hour", "free time", "when is free",
-                  "when free", "not busy", "available period", "no class", "no classes"}
-    if any(kw in q for kw in leisure_kw):
-        # Only if a faculty name is also present
-        for f in _FACULTY_DATA:
-            fname = f.get("name", "").lower()
-            for part in fname.split():
-                if len(part) >= 4 and part in q:
-                    return "faculty_leisure"
-        # Also handle generic "leisure hours" with a name-like token
-        for word in re.sub(r'[^a-z\s]', ' ', q).split():
-            if len(word) >= 4 and word not in {"free", "when", "hour", "period", "time", "busy", "class"}:
-                for f in _FACULTY_DATA:
-                    if word in f.get("name", "").lower():
-                        return "faculty_leisure"
+    # ── Button-click exact phrases → skip overview, go straight to detail view ──
+    # These are emitted by quickSend() from the 3-column table buttons.
+    _exact_tt  = re.match(r'^timetable of (.+)$', q)
+    _exact_lei = re.match(r'^leisure hours of (.+)$', q)
+    if _exact_tt:
+        return "faculty_timetable"
+    if _exact_lei:
+        return "faculty_leisure"
 
-    # 0b. Faculty Timetable Check (must come BEFORE generic timetable section check)
-    fac_tt_kw = {"timetable of", "schedule of", "time table of", "classes of",
-                 "teaching schedule", "class schedule", "what does teach", "when does teach"}
-    if any(kw in q for kw in fac_tt_kw):
-        # If query has timetable + a faculty name, route to faculty_timetable
-        for f in _FACULTY_DATA:
-            fname = f.get("name", "").lower()
-            for part in fname.split():
-                if len(part) >= 4 and part in q:
-                    return "faculty_timetable"
-    # Also detect "show timetable [faculty name]" or "dr xyz timetable"
+    # ── 0a. Generic faculty schedule/leisure/timetable query (no specific name) ──
+    # Use two-keyword presence so "faculty time table", "faculty free periods", etc. all match.
+    _fac_actor_kw  = {"faculty", "teacher", "teachers", "lecturer", "lecturers",
+                      "professor", "professors", "staff"}
+    _fac_sched_kw  = {"timetable", "time table", "schedule", "schedules",
+                      "timetables", "time tables", "class timing", "class timings"}
+    _fac_leisure_kw = {"leisure", "free period", "free periods", "free hour",
+                       "free hours", "free time", "not busy", "available"}
+    _has_actor   = any(kw in q for kw in _fac_actor_kw)
+    _has_sched   = any(kw in q for kw in _fac_sched_kw)
+    _has_leisure = any(kw in q for kw in _fac_leisure_kw)
+
+    if _has_actor and (_has_sched or _has_leisure):
+        # Only promote to faculty_overview_all if NO specific faculty name is present.
+        _fac_skip_gen = {"free", "when", "hour", "period", "time", "busy", "class",
+                         "timetable", "schedule", "leisure", "table", "info", "show",
+                         "what", "does", "teacher", "faculty", "staff", "lecturer"}
+        _name_found = False
+        for _f in _FACULTY_DATA:
+            _fname = _f.get("name", "").lower()
+            _ntoks = [p for p in re.sub(r'[^a-z\s]', ' ', _fname).split() if len(p) >= 4]
+            if any(tok in q and tok not in _fac_skip_gen for tok in _ntoks):
+                _name_found = True
+                break
+        if not _name_found:
+            return "faculty_overview_all"
+
+    # ── 0b. Query mentions a specific faculty name (any context) ──
+    # Check against every faculty in the DB; if a name token ≥4 chars matches → single overview row
+    _fac_skip = {"free", "when", "hour", "period", "time", "busy", "class", "timetable",
+                 "schedule", "leisure", "table", "info", "show", "what", "does"}
+    for f in _FACULTY_DATA:
+        fname = f.get("name", "").lower()
+        name_tokens = [p for p in re.sub(r'[^a-z\s]', ' ', fname).split() if len(p) >= 4]
+        if any(tok in q and tok not in _fac_skip for tok in name_tokens):
+            return "faculty_overview_single"
+
+    # ── 0c. Legacy catch — any timetable/leisure keyword with name-like word ──
     if any(kw in q for kw in ["timetable", "schedule", "time table"]):
         for f in _FACULTY_DATA:
             fname = f.get("name", "").lower()
             name_tokens = [p for p in fname.split() if len(p) >= 4]
             if any(tok in q for tok in name_tokens):
-                return "faculty_timetable"
+                return "faculty_overview_single"
 
-    # 0c. General Faculty Timetable/Schedule Check (no specific name in query, but refers to faculty schedule in general)
-    if any(kw in q for kw in ["faculty schedule", "faculty timetable", "faculty timetables", "faculty schedules", "teachers schedule", "teachers timetable", "teacher schedule", "teacher timetable", "teaching schedule", "class schedule"]):
-        return "faculty_timetable_list"
+    # ── 0d. Bare faculty-actor + sched/leisure keyword that slipped past 0a ──
+    # (catches edge cases where 0a was pre-empted by a name match that then didn't fire)
+    if _has_actor and (_has_sched or _has_leisure):
+        return "faculty_overview_all"
 
     # 1. Student Check
     if _ROLL_PAT.search(q) or any(w in q for w in ["student", "roll", "cgpa", "topper", "student info", "student list"]):
@@ -3222,8 +3301,13 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
         # Student + timetable → student_timetable (look up their section then show tt)
         return "student_timetable"
 
-    # 2. Timetable Check (section-based)
-    if any(w in q for w in ["timetable", "schedule", "time table", "class timing", "period", "slot", "section a", "section b", "section c", "section d"]):
+    # 2. Timetable Check (section-based) — skip if query contains faculty/teacher words
+    _sect_tt_kw = ["timetable", "schedule", "time table", "class timing", "period",
+                   "slot", "section a", "section b", "section c", "section d"]
+    _no_faculty_word = not any(w in q for w in ["faculty", "teacher", "teachers",
+                                                 "professor", "professors", "lecturer",
+                                                 "lecturers", "staff"])
+    if _no_faculty_word and any(w in q for w in _sect_tt_kw):
         return "timetable"
 
     # 3. Faculty Check
@@ -3421,9 +3505,23 @@ def get_response(query: str, conn_id: str = "default") -> str:
         log_failed_query(query, "labs", 0.0)
         return "I couldn't find that information in the uploaded NBKR AI&DS R23 curriculum."
 
-    if module == "faculty_timetable_list":
-        return build_all_faculty_schedule_list_html()
+    # ── faculty_overview_all: generic query → 3-column table with all faculty ──
+    if module == "faculty_overview_all":
+        return render_faculty_table(_FACULTY_DATA)
 
+    # ── faculty_overview_single: name mentioned → 3-column table, single row ──
+    if module == "faculty_overview_single":
+        fac = _find_faculty_by_name(expanded)
+        if fac:
+            return render_faculty_table([fac])
+        # Fallback: show full table if name not resolved
+        return render_faculty_table(_FACULTY_DATA)
+
+    # ── Legacy alias kept for any external callers ──
+    if module == "faculty_timetable_list":
+        return render_faculty_table(_FACULTY_DATA)
+
+    # ── Detail view: exact button-click phrase "timetable of <name>" ──
     if module == "faculty_timetable":
         fac = _find_faculty_by_name(expanded)
         if fac:
@@ -3433,6 +3531,7 @@ def get_response(query: str, conn_id: str = "default") -> str:
         log_failed_query(query, "faculty_timetable", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
+    # ── Detail view: exact button-click phrase "leisure hours of <name>" ──
     if module == "faculty_leisure":
         fac = _find_faculty_by_name(expanded)
         if fac:
