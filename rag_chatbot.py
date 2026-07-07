@@ -3328,6 +3328,24 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if "attendance" in expanded:
         return _attendance_card()
 
+    dept_about_signals = [
+        "about", "overview", "information", "info", "details", "tell me",
+        "what is", "branch", "department", "dept", "intake", "objective",
+        "objectives", "highlight", "highlights", "strength", "strengths",
+    ]
+    specific_query_signals = [
+        "timetable", "schedule", "faculty", "hod", "bus", "fee", "attendance",
+        "lab", "labs", "subject", "student", "roll", "circular", "notice",
+        "placement", "career", "skill", "event", "club",
+    ]
+    is_aids_query = any(w in expanded for w in ["artificial intelligence data science", "ai&ds", "ai ds"])
+    if (
+        is_aids_query
+        and any(w in expanded for w in dept_about_signals)
+        and not any(w in expanded for w in specific_query_signals)
+    ):
+        return build_department_info_card()
+
     qa     = analyse_query(expanded)
     intent = detect_intent(expanded, qa)
 
@@ -3407,6 +3425,9 @@ def get_response(query: str, conn_id: str = "default") -> str:
 
     if module == "college":
         return handle_college_query(expanded)
+
+    if module == "department":
+        return build_department_info_card()
 
     if module == "services":
         if "attendance" in expanded:
@@ -4948,6 +4969,41 @@ def load_dept_info():
         with open("nbkr_department_info.json","r",encoding="utf-8") as f:
             _DEPT_INFO = json.load(f)
         print("✓ Department info loaded")
+
+
+def build_department_info_card() -> str:
+    if not _DEPT_INFO:
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
+
+    dept = _DEPT_INFO.get("department", {})
+    overview = dept.get("overview", {})
+    programmes = dept.get("programmes", [])
+    highlights = dept.get("highlights", [])
+    strengths = dept.get("strengths", {})
+
+    ai_ds = next(
+        (p for p in programmes if "artificial intelligence" in p.get("branch", "").lower() or "ai" in p.get("branch", "").lower()),
+        {}
+    )
+    objective_items = "".join(
+        f'<li style="margin:3px 0">{item}</li>'
+        for item in overview.get("objectives", [])[:3]
+    )
+    highlight_items = "".join(
+        f'<li style="margin:3px 0">{item}</li>'
+        for item in highlights[:3]
+    )
+    strength_text = " ".join(str(v) for v in strengths.values())
+
+    return _info_card("AI & DS Branch Information", [
+        ("College", _DEPT_INFO.get("collegeName", "NBKR IST")),
+        ("Department", dept.get("name", "Department of Artificial Intelligence & Data Science")),
+        ("About", overview.get("description") or _DEPT_INFO.get("about", "")),
+        ("AI & DS Intake", str(ai_ds.get("intake", "240"))),
+        ("Objectives", f'<ul style="margin:0;padding-left:18px">{objective_items}</ul>'),
+        ("Highlights", f'<ul style="margin:0;padding-left:18px">{highlight_items}</ul>'),
+        ("Strengths", strength_text),
+    ])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

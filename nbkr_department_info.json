@@ -1,4 +1,5 @@
 {
+  "collegeName": "NBKR IST",
   "vision": "To be a globally recognized center of excellence in Artificial Intelligence and Data Science education and research.",
   "mission": "To provide quality education in AI & DS, foster innovation, and develop industry-ready professionals with ethical values.",
   "peos": [
@@ -11,5 +12,45 @@
     "PSO2: Design and develop intelligent systems using modern AI frameworks."
   ],
   "hod_message": "Welcome to the Department of Artificial Intelligence and Data Science at NBKR Institute of Science and Technology. Our department is committed to providing world-class education in AI & DS to shape the future innovators.",
-  "about": "The Department of AI & DS at NBKRIST was established to meet the growing demand for AI and Data Science professionals. We offer B.Tech in AI & DS with state-of-the-art labs, experienced faculty, and strong industry connections."
+  "about": "The Department of AI & DS at NBKRIST was established to meet the growing demand for AI and Data Science professionals. We offer B.Tech in AI & DS with state-of-the-art labs, experienced faculty, and strong industry connections.",
+  "department": {
+    "name": "Department of Artificial Intelligence & Data Science",
+    "overview": {
+      "description": "The Department offers an undergraduate programme in Artificial Intelligence & Data Science. It focuses on providing high-quality education and training in state-of-the-art technologies while enhancing students' technical and soft skills.",
+      "objectives": [
+        "Provide high-quality education in emerging technologies.",
+        "Train students in state-of-the-art technologies.",
+        "Develop analytical and problem-solving skills.",
+        "Enhance verbal communication and soft skills.",
+        "Prepare students for competitive industrial environments."
+      ]
+    },
+    "programmes": [
+      {
+        "course": "B.Tech",
+        "branch": "Artificial Intelligence & Data Science",
+        "intake": 240
+      }
+    ],
+    "coursesOffered": [
+      {
+        "serialNo": 1,
+        "course": "B.Tech",
+        "branch": "AI & DS",
+        "intake": 240
+      }
+    ],
+    "highlights": [
+      "Focuses on all important aspects of computer science and emerging technologies.",
+      "Emphasizes soft skills, analytical capabilities, and verbal communication.",
+      "Prepares students to compete in the global technology industry.",
+      "Students have consistently excelled in highly competitive industrial environments.",
+      "Graduates have secured placements in top-ranking multinational companies (MNCs)."
+    ],
+    "strengths": {
+      "faculty": "Dedicated faculty committed to delivering quality education.",
+      "curriculum": "Well-planned curriculum aligned with industry requirements.",
+      "students": "Talented students with excellent academic and placement records."
+    }
+  }
 }

@@ -112,5 +112,29 @@
     "query": "\"What are the bus fees?\"",
     "classified_module": "bus_fee",
     "top_score": 0.527
+  },
+  {
+    "timestamp": "2026-07-06T21:53:23.149063",
+    "query": "tip",
+    "classified_module": "unknown",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-06T21:53:35.157797",
+    "query": "so about aids",
+    "classified_module": "unknown",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-07T10:24:46.577307",
+    "query": "aids faculty",
+    "classified_module": "faculty",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-07T10:30:57.420627",
+    "query": "why aids",
+    "classified_module": "unknown",
+    "top_score": 0.0
   }
 ]
