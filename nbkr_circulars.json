@@ -12,5 +12,30 @@
     },
     "applicable_to": "III and IV B.Tech students (MQ, NRTF, SPOT category)",
     "payment_portal": "https://portal.nbkrsac.in"
+  },
+  {
+    "id": "B-10/2026/05",
+    "date": "07-07-2026",
+    "title": "Registration and Payment of Charges for College Bus",
+    "category": "fee circular",
+    "content": "N.B.K.R. Institute of Science & Technology (Autonomous). Notice No. B-10/2026/05, dated 07-07-2026. Students of III B.Tech. I Semester and IV B.Tech. I Semester for the Academic Year 2026-2027 whose classes commence from 13-07-2026 and who intend to avail the college bus facility shall complete the payment of the annual bus charges in full. Annual bus charges for various routes are displayed on the respective notice boards. Payment can be made through https://portal.nbkrsac.in or by bank transfer to Director, NBKRIST, Account No. 116010011000353, IFSC UBIN0811602, Union Bank of India, Vidyanagar (Edu. Complex). Students should submit transaction details at the College Office, collect the receipt, produce it at the Transportation Section, and collect the Bus Pass. The college bus facility shall be available only to students who have paid the prescribed bus fee in full. Issued by the Principal.",
+    "key_dates": {
+      "class_commencement": "13-07-2026"
+    },
+    "applicable_to": "III B.Tech. I Semester and IV B.Tech. I Semester students availing the college bus facility",
+    "payment_portal": "https://portal.nbkrsac.in"
+  },
+  {
+    "id": "Hostels/2026/01",
+    "date": "07-07-2026",
+    "title": "Hostel Fees - III & IV B.Tech. Students (AY 2026-27)",
+    "category": "fee circular",
+    "content": "N B K R I S T Hostels Notice No. Hostels/2026/01, dated 07-07-2026. This notice applies to III B.Tech. and IV B.Tech. students for AY 2026-27, I Semester, with classes commencing from 13-07-2026. Students willing to take admission to hostels should collect the application form from the hostel office after producing the tuition fee payment receipt. Tuition fee must be paid in full for MQ, NRTF, and SPOT category students. Hostel fee can be paid in two instalments. Boys: first instalment Rs. 40,000 due on 13-07-2026, second instalment Rs. 40,000 before I Semester End Examination, total Rs. 80,000. Girls: first instalment Rs. 40,000 due on 13-07-2026, second instalment Rs. 35,000 before I Semester End Examination, total Rs. 75,000. Payment can be made by NEFT, UPI, Google Pay, or PhonePe to Director, NBKRIST, Account No. 116010011000354, IFSC UBIN0811602, Union Bank of India, Vidyanagar Educational Complex Branch. Students are advised to adhere strictly to the payment schedule to avoid any inconvenience. Issued by the Principal.",
+    "key_dates": {
+      "class_commencement": "13-07-2026",
+      "hostel_first_instalment_due": "13-07-2026"
+    },
+    "applicable_to": "III B.Tech. and IV B.Tech. students seeking hostel admission",
+    "payment_portal": ""
   }
 ]

@@ -3238,6 +3238,11 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
                 if word in fname or word in fname.replace(" ",""):
                     return "faculty"
 
+    # 4a. Circular / notice checks before fee lookup so "fee circular" is not
+    # treated as a bus-fee amount query.
+    if any(w in q for w in ["circular", "notice", "announcement", "latest notice", "fee circular"]):
+        return "circular"
+
     # 4. Bus Fee Check
     if any(w in q for w in ["bus", "fee", "fare", "charge", "transport", "route", "stop", "boarding point"]):
         return "bus_fee"
@@ -3277,10 +3282,6 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     ]
     if any(w in q for w in college_kw):
         return "college"
-
-    # 6. Circulars Check
-    if any(w in q for w in ["circular", "notice", "announcement", "latest notice"]):
-        return "circular"
 
     # 7. General Check
     general_keywords = ["hostel", "admission", "admissions", "course", "courses", "library", "placement", "placements", "portal", "intranet", "e-journal", "ejournal", "assessment", "exam duties", "login"]
@@ -3554,6 +3555,18 @@ def get_response(query: str, conn_id: str = "default") -> str:
         for c in _CIRCULARS:
             if c.get("id","").lower() in q_lower:
                 return build_circular_card(c)
+        if any(w in q_lower for w in ["hostel", "hostels"]):
+            for c in _CIRCULARS:
+                text = f'{c.get("title","")} {c.get("content","")} {c.get("category","")}'.lower()
+                if "hostel" in text:
+                    return build_circular_card(c)
+        if any(w in q_lower for w in ["bus", "transport", "transportation"]):
+            for c in _CIRCULARS:
+                text = f'{c.get("title","")} {c.get("content","")} {c.get("category","")}'.lower()
+                if "bus" in text or "transport" in text:
+                    return build_circular_card(c)
+        if any(w in q_lower for w in ["fee circular", "fee circulars", "fee notice", "fee notices"]):
+            return build_all_circulars_table()
         if any(w in q_lower for w in ["latest","recent","new","last","current"]):
             if _CIRCULARS: return build_circular_card(_CIRCULARS[-1])
 
