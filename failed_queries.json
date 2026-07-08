@@ -114,27 +114,159 @@
     "top_score": 0.527
   },
   {
-    "timestamp": "2026-07-06T21:53:23.149063",
-    "query": "tip",
-    "classified_module": "unknown",
+    "timestamp": "2026-07-03T15:22:13.607780",
+    "query": "nataraj timetable",
+    "classified_module": "timetable",
     "top_score": 0.0
   },
   {
-    "timestamp": "2026-07-06T21:53:35.157797",
-    "query": "so about aids",
-    "classified_module": "unknown",
+    "timestamp": "2026-07-04T11:06:28.095783",
+    "query": "faculty time table",
+    "classified_module": "timetable",
     "top_score": 0.0
   },
   {
-    "timestamp": "2026-07-07T10:24:46.577307",
-    "query": "aids faculty",
-    "classified_module": "faculty",
+    "timestamp": "2026-07-04T11:07:19.904603",
+    "query": "faculty time table",
+    "classified_module": "timetable",
     "top_score": 0.0
   },
   {
-    "timestamp": "2026-07-07T10:30:57.420627",
-    "query": "why aids",
-    "classified_module": "unknown",
+    "timestamp": "2026-07-04T11:11:24.102839",
+    "query": "faculty time table",
+    "classified_module": "timetable",
     "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-04T11:20:01.709556",
+    "query": "faculty time table",
+    "classified_module": "timetable",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-04T12:06:46.779488",
+    "query": "faculty time table",
+    "classified_module": "timetable",
+    "top_score": 0.0
+  },
+  {
+    "timestamp": "2026-07-04T15:57:54.669791",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.1473
+  },
+  {
+    "timestamp": "2026-07-04T15:59:00.686777",
+    "query": "bus fee for gate stop",
+    "classified_module": "bus_fee",
+    "top_score": 0.5008
+  },
+  {
+    "timestamp": "2026-07-04T15:59:00.705219",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.1473
+  },
+  {
+    "timestamp": "2026-07-04T16:12:34.447968",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.2861
+  },
+  {
+    "timestamp": "2026-07-04T16:22:21.518025",
+    "query": "bus fee for gate stop",
+    "classified_module": "bus_fee",
+    "top_score": 0.6704
+  },
+  {
+    "timestamp": "2026-07-04T16:24:53.801918",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.0001
+  },
+  {
+    "timestamp": "2026-07-04T16:24:53.831210",
+    "query": "bus fee for gate stop",
+    "classified_module": "bus_fee",
+    "top_score": 0.6704
+  },
+  {
+    "timestamp": "2026-07-04T16:27:29.904896",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.2592
+  },
+  {
+    "timestamp": "2026-07-04T16:42:20.616108",
+    "query": "silabus for cse",
+    "classified_module": "bus_fee",
+    "top_score": 0.4528
+  },
+  {
+    "timestamp": "2026-07-04T16:43:08.854705",
+    "query": "silabus for cse",
+    "classified_module": "bus_fee",
+    "top_score": 0.4528
+  },
+  {
+    "timestamp": "2026-07-04T16:43:09.036749",
+    "query": "circuler about admision",
+    "classified_module": "department",
+    "top_score": 0.5684
+  },
+  {
+    "timestamp": "2026-07-04T16:43:09.391233",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.2592
+  },
+  {
+    "timestamp": "2026-07-04T16:53:57.854240",
+    "query": "do you have a gym",
+    "classified_module": "unknown",
+    "top_score": 0.2874
+  },
+  {
+    "timestamp": "2026-07-04T16:53:57.942980",
+    "query": "tell me a joke about aliens",
+    "classified_module": "unknown",
+    "top_score": 0.2568
+  },
+  {
+    "timestamp": "2026-07-04T16:53:58.286295",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.2592
+  },
+  {
+    "timestamp": "2026-07-04T16:55:37.349514",
+    "query": "do you have a gym",
+    "classified_module": "unknown",
+    "top_score": 0.2874
+  },
+  {
+    "timestamp": "2026-07-04T16:55:37.442613",
+    "query": "tell me a joke about aliens",
+    "classified_module": "unknown",
+    "top_score": 0.2568
+  },
+  {
+    "timestamp": "2026-07-04T16:55:37.761085",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.2592
+  },
+  {
+    "timestamp": "2026-07-04T16:58:12.026641",
+    "query": "tell me a joke about aliens",
+    "classified_module": "unknown",
+    "top_score": 0.2568
+  },
+  {
+    "timestamp": "2026-07-04T16:58:10.051492",
+    "query": "kdjhfkjshdkfjh random gibberish query",
+    "classified_module": "unknown",
+    "top_score": 0.271
   }
 ]
