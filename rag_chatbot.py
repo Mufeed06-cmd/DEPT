@@ -1624,6 +1624,42 @@ def build_faculty_card(f, include_timetable=False):
     {subj_html}
     {tt_html}
   </div>
+</div>
+<div style="font-family:'Segoe UI',sans-serif;margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid #c5cae9">
+  <div style="background:linear-gradient(135deg,#2d3a6b,#4a5568);color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+    📅 Faculty Schedule Overview
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:left;border:1px solid #e0e4f0">FACULTY NAME</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">TIME TABLE VIEW</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">LEISURE PERIODS VIEW</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;font-size:13px;color:#1a1a2e">
+          <div style="font-weight:600">{name}</div>
+          <div style="font-size:11px;color:#7c3aed;margin-top:2px">{desig}</div>
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('timetable of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#2d3a6b;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            📅 View Timetable
+          </button>
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('leisure hours of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#7c3aed;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            🕐 View Leisure
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>"""
 
 
@@ -3706,10 +3742,15 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     # These are emitted by quickSend() from the 3-column table buttons.
     _exact_tt  = re.match(r'^timetable of (.+)$', q)
     _exact_lei = re.match(r'^leisure hours of (.+)$', q)
+    _all_kw = {"all", "all faculty", "all teachers", "all staff", "all lecturers", "every", "everyone"}
     if _exact_tt:
-        return "faculty_timetable"
+        _tt_target = _exact_tt.group(1).strip()
+        if not any(kw == _tt_target or kw in _tt_target for kw in _all_kw):
+            return "faculty_timetable"
     if _exact_lei:
-        return "faculty_leisure"
+        _lei_target = _exact_lei.group(1).strip()
+        if not any(kw == _lei_target or kw in _lei_target for kw in _all_kw):
+            return "faculty_leisure"
 
     # ── Specific faculty name match ──
     # Check if a specific faculty is mentioned in the query
@@ -3746,6 +3787,17 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     _has_actor   = any(kw in q for kw in _fac_actor_kw)
     _has_sched   = any(kw in q for kw in _fac_sched_kw)
     _has_leisure = any(kw in q for kw in _fac_leisure_kw)
+
+    # ── Direct-phrase shortcuts for "all faculty" overview ──
+    _all_faculty_phrases = [
+        "all faculty timetable", "all faculty time table", "all faculty schedule",
+        "all teachers timetable", "all staff timetable", "timetable of all faculty",
+        "schedule of all faculty", "show all faculty timetable", "show all timetable",
+        "faculty timetable list", "all timetable", "full faculty schedule",
+        "all faculty schedules", "show faculty timetable", "show faculty schedule",
+    ]
+    if any(phrase in q for phrase in _all_faculty_phrases):
+        return "faculty_overview_all"
 
     if _has_actor and (_has_sched or _has_leisure):
         # Only promote to faculty_overview_all if NO specific faculty name is present.
@@ -4336,7 +4388,47 @@ def get_response(query: str, conn_id: str = "default") -> str:
         if fac:
             tt = fac.get("timetable", {})
             if tt:
-                return build_faculty_timetable_html(fac)
+                name = fac.get("name", "")
+                desig = fac.get("designation", "")
+                desig_badge = f'<div style="font-size:11px;color:#7c3aed;margin-top:2px">{desig}</div>' if desig else ""
+                schedule_overview = f"""
+<div style="font-family:'Segoe UI',sans-serif;margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid #c5cae9">
+  <div style="background:linear-gradient(135deg,#2d3a6b,#4a5568);color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+    &#128197; Faculty Schedule Overview
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:left;border:1px solid #e0e4f0">FACULTY NAME</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">TIME TABLE VIEW</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">LEISURE PERIODS VIEW</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;font-size:13px;color:#1a1a2e">
+          <div style="font-weight:600">{name}</div>
+          {desig_badge}
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('timetable of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#2d3a6b;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            &#128197; View Timetable
+          </button>
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('leisure hours of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#7c3aed;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            &#128336; View Leisure
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>"""
+                return build_faculty_timetable_html(fac) + schedule_overview
         web_reply = handle_web_fallback(query, is_college_context=True)
         if web_reply:
             return web_reply
@@ -4351,7 +4443,47 @@ def get_response(query: str, conn_id: str = "default") -> str:
         if fac:
             tt = fac.get("timetable", {})
             if tt:
-                return build_faculty_leisure_html(fac)
+                name = fac.get("name", "")
+                desig = fac.get("designation", "")
+                desig_badge = f'<div style="font-size:11px;color:#7c3aed;margin-top:2px">{desig}</div>' if desig else ""
+                schedule_overview = f"""
+<div style="font-family:'Segoe UI',sans-serif;margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid #c5cae9">
+  <div style="background:linear-gradient(135deg,#2d3a6b,#4a5568);color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+    &#128197; Faculty Schedule Overview
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:left;border:1px solid #e0e4f0">FACULTY NAME</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">TIME TABLE VIEW</th>
+        <th style="padding:9px 14px;background:#f4f6fb;color:#2d3a6b;font-size:11px;font-weight:700;text-align:center;border:1px solid #e0e4f0">LEISURE PERIODS VIEW</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;font-size:13px;color:#1a1a2e">
+          <div style="font-weight:600">{name}</div>
+          {desig_badge}
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('timetable of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#2d3a6b;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            &#128197; View Timetable
+          </button>
+        </td>
+        <td style="padding:10px 14px;border:1px solid #e8eaf6;text-align:center">
+          <button onclick="quickSend('leisure hours of {name}')"
+            onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1.0"
+            style="background:#7c3aed;color:#fff;border:none;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
+            &#128336; View Leisure
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>"""
+                return build_faculty_leisure_html(fac) + schedule_overview
         web_reply = handle_web_fallback(query, is_college_context=True)
         if web_reply:
             return web_reply
