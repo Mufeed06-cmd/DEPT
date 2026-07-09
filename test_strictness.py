@@ -25,6 +25,7 @@ def init_chatbot():
     rag_chatbot.load_placements()
     rag_chatbot.load_events()
     rag_chatbot.load_dept_info()
+    rag_chatbot.load_college_info()
     rag_chatbot.load_subjects_list()
     rag_chatbot._load_student_dw()
     ok = rag_chatbot.initialize_rag()
@@ -44,20 +45,45 @@ def run_tests():
         except Exception as e:
             print(f"⚠ Could not remove failed_queries.json: {e}")
 
+    # Mock requests.post to simulate web fallback failure when "fail_me_now" is in query
+    import requests
+    original_post = requests.post
+    def mock_post(url, *args, **kwargs):
+        payload = kwargs.get("json", {})
+        messages = payload.get("messages", [])
+        if any("fail_me_now" in m.get("content", "").lower() for m in messages):
+            class MockResponse:
+                status_code = 500
+                text = ""
+            return MockResponse()
+        return original_post(url, *args, **kwargs)
+    requests.post = mock_post
+
     # Test cases: (query, expected_module, should_succeed_bool)
     test_cases = [
         ("Tell me about the vision of the department", "department", True),
-        ("Who is Dr Narayana Rao Appini", "faculty", True),
+        ("Who is Dr Narayana Rao Appini", "faculty_profile", True),
         ("What is the bus fee for Nellore", "bus_fee", True),
-        ("What is the distance to the moon?", "unknown", False),
-        ("How to build a nuclear reactor at home?", "unknown", False),
+        ("What is the distance to the moon?", "unknown", True),
+        ("How to build a nuclear reactor at home?", "unknown", True),
+        ("tell me about correspondence courses in NBKR", "college", True),
+        ("what is machine learning", "unknown", True),
+        ("NBKR full form", "college", True),
+        ("What is the distance to the moon? fail_me_now", "unknown", False),
+        ("How to build a nuclear reactor at home? fail_me_now", "unknown", False),
+        ("tell me about correspondent as a journalism career", "college", False),
     ]
 
     print("\n" + "=" * 80)
     print("🏃 Running Test Cases")
     print("=" * 80)
 
-    fallback_text = "I don't know the answer to that question. Please contact the department office or administrator."
+    fallback_signatures = [
+        "I couldn't find that information",
+        "I don't know the answer",
+        "contact the department office",
+        "Please ask me something about the college"
+    ]
 
     passed = 0
     for i, (query, expected_module, should_succeed) in enumerate(test_cases, 1):
@@ -69,7 +95,7 @@ def run_tests():
         response = rag_chatbot.get_response(query)
         
         # Check fallback behavior
-        has_fallback = fallback_text in response
+        has_fallback = any(sig in response for sig in fallback_signatures)
         
         print(f"  -> Response length: {len(response)} chars")
         if should_succeed:
@@ -88,6 +114,9 @@ def run_tests():
         # Check classification match
         if module != expected_module:
             print(f"  ❌ FAIL: Module mismatch. Expected {expected_module}, got {module}")
+
+    # Restore original requests.post
+    requests.post = original_post
             # we don't decrement passed if it already failed above
 
     # Verify failed query logging

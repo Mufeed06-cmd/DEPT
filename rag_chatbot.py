@@ -32,6 +32,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 import json, os, re, numpy as np, uvicorn
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Global state
@@ -839,6 +842,37 @@ def load_faculty_data():
         with open("aids_faculty_data.json", "r", encoding="utf-8") as f:
             _FACULTY_DATA = json.load(f)
 
+    # Merge specializations from aids_faculty_kb.json
+    for f in _FACULTY_DATA:
+        f["specialization"] = "—"
+
+    if os.path.exists("aids_faculty_kb.json"):
+        try:
+            with open("aids_faculty_kb.json", "r", encoding="utf-8") as f_kb:
+                kb_data = json.load(f_kb)
+            for kb_key, kb_val in kb_data.items():
+                if kb_key in ["aids faculty", "ai ds department", "hod aids", "machine learning faculty", "ai faculty"]:
+                    continue
+                kb_norm = _normalise_name(kb_key)
+                kb_tokens = {t for t in kb_norm.split() if len(t) >= 4}
+                if not kb_tokens:
+                    continue
+
+                matched_fac = None
+                for f in _FACULTY_DATA:
+                    fn_norm = _normalise_name(f.get("name", ""))
+                    fn_tokens = {t for t in fn_norm.split() if len(t) >= 4}
+                    if kb_norm == fn_norm or (kb_tokens & fn_tokens):
+                        matched_fac = f
+                        break
+
+                if matched_fac:
+                    match = re.search(r'Specialization:\s*([^.]+)', kb_val)
+                    if match:
+                        matched_fac["specialization"] = match.group(1).strip()
+        except Exception as e:
+            print(f"Error merging specialization: {e}")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Curriculum data
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1326,7 +1360,7 @@ def build_faculty_list_table(faculty_list=None):
 </div>"""
 
 
-def build_faculty_timetable_html(timetable) -> str:
+def build_faculty_timetable_html_embed(timetable) -> str:
     """Render faculty weekly timetable.
     Supports:
       - Slot format: {"Mon": {"9:00-10:00": "SUBJECT (CLASS)", ...}, ...}
@@ -1461,15 +1495,44 @@ def build_faculty_timetable_html(timetable) -> str:
     return ""
 
 
-def build_faculty_card(f):
-    """Rich faculty card showing all fields from the PDF: name, designation,
-    qualification, phone, email, date of joining. No specialization."""
+def extract_subjects_handled(f: Dict) -> List[str]:
+    subjects = set()
+    timetable = f.get("timetable", {})
+    if isinstance(timetable, dict):
+        for day, slots in timetable.items():
+            if isinstance(slots, dict):
+                for slot, val in slots.items():
+                    if not val:
+                        continue
+                    val_clean = val.strip()
+                    if val_clean in {"L", "U", "N", "C", "H", "BREAK", "LUNCH", "l", "u", "n", "c", "h", "break", "lunch"}:
+                        continue
+                    match = re.match(r'^(.+?)\s*\((.+)\)$', val_clean)
+                    subj = match.group(1).strip() if match else val_clean
+                    if subj and subj not in ["-", "LUNCH", "BREAK"]:
+                        subjects.add(subj)
+    full_subjects = []
+    subj_full = globals().get("SUBJECT_FULL", {})
+    for s in sorted(subjects):
+        full_name = subj_full.get(s, s)
+        if full_name != s:
+            full_subjects.append(f"{full_name} ({s})")
+        else:
+            full_subjects.append(s)
+    return full_subjects
+
+
+def build_faculty_card(f, include_timetable=False):
+    """Rich faculty card showing all fields: name, designation, department,
+    qualification, phone, email, date of joining, cabin/room, subjects handled,
+    and optional timetable. No timetable by default."""
     name  = f.get("name", "—")
     desig = f.get("designation", "—")
     qual  = f.get("Qualification", "")
     phone = f.get("phone", "")
     email = f.get("email", "")
     doj   = f.get("date_of_joining", "")
+    room  = f.get("room") or f.get("cabin") or f.get("cabin_no")
 
     def _row(icon, label, value, hi=False):
         bg = "background:#f8f9ff;" if hi else ""
@@ -1479,6 +1542,9 @@ def build_faculty_card(f):
                 f'color:#888;text-transform:uppercase;letter-spacing:.04em;padding-top:1px;flex-shrink:0">'
                 f'{icon} {label}</span>'
                 f'<span style="font-size:13px;color:#222;line-height:1.6;word-break:break-word">{value}</span></div>')
+
+    # Department
+    dept_html = _row("🏛️", "Department", "Artificial Intelligence & Data Science")
 
     # Qualification pills
     qual_html = ""
@@ -1494,7 +1560,8 @@ def build_faculty_card(f):
     # Phone — make each number a tel link
     phone_html = ""
     if phone:
-        nums = [p.strip() for p in phone.split(",") if p.strip()]
+        # Split by / or , to handle multi-phones
+        nums = [p.strip() for p in re.split(r'[,/]', phone) if p.strip()]
         phone_html = _row("📱", "Phone",
             "".join(f'<a href="tel:{n}" style="color:#1a237e;text-decoration:none;'
                     f'margin-right:10px;display:inline-block">{n}</a>' for n in nums))
@@ -1510,8 +1577,27 @@ def build_faculty_card(f):
     # Date of joining
     doj_html = _row("📅", "Date of Joining", doj) if doj else ""
 
+    # Cabin / Room
+    room_html = ""
+    if room:
+        room_html = _row("🚪", "Cabin/Room", room)
+
+    # Subjects Handled
+    subj_list = extract_subjects_handled(f)
+    subj_html = ""
+    if subj_list:
+        pills = "".join(
+            f'<span style="display:inline-block;background:#e0f2fe;color:#0369a1;'
+            f'padding:2px 9px;border-radius:8px;font-size:12px;font-weight:600;margin:2px 3px 2px 0">'
+            f'{s}</span>'
+            for s in subj_list
+        )
+        subj_html = _row("📚", "Subjects Handled", pills, hi=True)
+
     # Timetable
-    tt_html = build_faculty_timetable_html(f.get("timetable", []))
+    tt_html = ""
+    if include_timetable:
+        tt_html = build_faculty_timetable_html_embed(f.get("timetable", {}))
 
     # Header gradient by designation
     grad = {
@@ -1529,10 +1615,13 @@ def build_faculty_card(f):
   </div>
   <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;
               border-radius:0 0 10px 10px;overflow:hidden">
+    {dept_html}
     {qual_html}
     {phone_html}
     {email_html}
     {doj_html}
+    {room_html}
+    {subj_html}
     {tt_html}
   </div>
 </div>"""
@@ -3228,12 +3317,10 @@ def _find_faculty_by_name(query: str) -> Optional[Dict]:
     """
     Advanced multi-strategy faculty name lookup:
       1. Exact normalised match             → score 1.0
-      2. All query tokens present in name   → score 0.95
-      3. Substring: name contains query     → score 0.90
-      4. Substring: query contains name     → score 0.85
-      5. Token Jaccard overlap              → score ≤ 0.80
-      6. Any single token match (≥4 chars)  → score 0.60
-    Returns best match with score ≥ 0.35, else None.
+      2. Token Jaccard overlap              → score weight
+      3. Fuzzy match token_sort_ratio       → score weight
+      4. Single token close ratio check
+    Returns best match with score >= 0.60, else None.
     """
     # Strip common question prefixes
     clean = re.sub(
@@ -3243,12 +3330,13 @@ def _find_faculty_by_name(query: str) -> Optional[Dict]:
         r'phone of|email of|contact of|joining date of|'
         r'timetable of|time table of|schedule of|classes of|leisure hours of|'
         r'free periods of|free hours of|when is|free|timetable|schedule|'
-        r'time table|classes|leisure|free period|free hour|free time)\b',
+        r'time table|classes|leisure|free period|free hour|free time|profile of|profile|sir|madam|madam|teacher|professor|lecturer|mrs|mr|dr|prof)\b',
         '', query, flags=re.IGNORECASE
     ).strip()
 
     q_norm = _normalise_name(clean)
-    q_tokens = set(q_norm.split())
+    if not q_norm:
+        return None
 
     best_score = 0.0
     best_match = None
@@ -3256,36 +3344,35 @@ def _find_faculty_by_name(query: str) -> Optional[Dict]:
     for f in _FACULTY_DATA:
         fname = f.get("name", "")
         fn = _normalise_name(fname)
-        fn_tokens = set(fn.split())
 
-        # Strategy 1 — exact
+        # 1. Exact match
         if q_norm == fn:
             return f
 
-        # Strategy 2 — all query tokens inside faculty name tokens
-        if q_tokens and q_tokens.issubset(fn_tokens):
-            score = 0.95
-        # Strategy 3 — query string is substring of faculty name
-        elif q_norm and q_norm in fn:
-            score = 0.90
-        # Strategy 4 — faculty name is substring of query
-        elif fn and fn in q_norm:
-            score = 0.85
-        else:
-            # Strategy 5 — Jaccard token overlap
-            score = _token_overlap(q_norm, fn) * 0.80
-            # Strategy 6 — any single meaningful token match
-            if score < 0.35:
-                long_q = {t for t in q_tokens if len(t) >= 4}
-                long_f = {t for t in fn_tokens if len(t) >= 4}
-                if long_q & long_f:
-                    score = max(score, 0.60)
+        # 2. Token Jaccard overlap
+        overlap = _token_overlap(q_norm, fn)
+        score = overlap * 0.90
+
+        # 3. Fuzzy matching using rapidfuzz token_sort_ratio
+        fuzzy_score = fuzz.token_sort_ratio(q_norm, fn) / 100.0
+        score = max(score, fuzzy_score)
+
+        # 4. Check if any query token is a substring of any faculty name token, fuzzy matched
+        q_tokens = q_norm.split()
+        fn_tokens = fn.split()
+        for qt in q_tokens:
+            if len(qt) >= 3:
+                for ft in fn_tokens:
+                    if len(ft) >= 3:
+                        token_ratio = fuzz.ratio(qt, ft) / 100.0
+                        if token_ratio >= 0.75:
+                            score = max(score, token_ratio * 0.85)
 
         if score > best_score:
             best_score = score
             best_match = f
 
-    return best_match if best_score >= 0.35 else None
+    return best_match if best_score >= 0.60 else None
 
 
 def synthesize_answer(qa: QueryAnalysis, docs_with_scores: List[Tuple[Dict,float]], intent: str) -> Optional[str]:
@@ -3624,6 +3711,30 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     if _exact_lei:
         return "faculty_leisure"
 
+    # ── Specific faculty name match ──
+    # Check if a specific faculty is mentioned in the query
+    fac = _find_faculty_by_name(q)
+    if not fac and any(w in q for w in ["hod", "head of department", "head of dept"]):
+        fac = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
+
+    if fac:
+        tt_kw = {"timetable", "time table", "schedule", "schedules", "classes", "class timing", "class timings", "timings", "timing", "working hours", "hours", "lectures"}
+        leisure_kw = {"leisure", "free", "available", "not busy", "when free", "free periods", "free hours", "free time"}
+        profile_kw = {"info", "information", "details", "profile", "qualification", "contact", "email", "phone", "about", "who is", "specialization", "joining date", "doj"}
+        
+        has_tt = any(w in q for w in tt_kw)
+        has_leisure = any(w in q for w in leisure_kw)
+        has_profile = any(w in q for w in profile_kw)
+        
+        if has_leisure:
+            return "faculty_leisure"
+        elif has_tt and has_profile:
+            return "faculty_both"
+        elif has_tt:
+            return "faculty_timetable"
+        else:
+            return "faculty_profile"
+
     # ── 0a. Generic faculty schedule/leisure/timetable query (no specific name) ──
     # Use two-keyword presence so "faculty time table", "faculty free periods", etc. all match.
     _fac_actor_kw  = {"faculty", "teacher", "teachers", "lecturer", "lecturers",
@@ -3688,12 +3799,12 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
     _no_faculty_word = not any(w in q for w in ["faculty", "teacher", "teachers",
                                                  "professor", "professors", "lecturer",
                                                  "lecturers", "staff"])
-    if _no_faculty_word and any(w in q for w in _sect_tt_kw):
+    if _no_faculty_word and any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in _sect_tt_kw):
         return "timetable"
 
     # 3. Faculty Check
     faculty_keywords = ["faculty", "teacher", "professor", "lecturer", "staff", "designation", "specialization", "doj", "joining date", "teaches", "teaching"]
-    if any(w in q for w in faculty_keywords) or any(w in q for w in ["hod", "head of department", "head of dept"]):
+    if any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in faculty_keywords) or any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in ["hod", "head of department", "head of dept"]):
         return "faculty"
     skip_words = {"sir","mam","madam","prof","dr","mr","mrs","ms","faculty","teacher","lecturer","who","is","the","tell","me","show","find","get","what"}
     for word in re.sub(r'[^a-z\s]', ' ', q).split():
@@ -3705,21 +3816,26 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
 
     # 4a. Circular / notice checks before fee lookup so "fee circular" is not
     # treated as a bus-fee amount query.
-    if any(w in q for w in ["circular", "notice", "announcement", "latest notice", "fee circular"]):
+    if any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in ["circular", "notice", "announcement", "latest notice", "fee circular"]):
         return "circular"
 
     # 4. Bus Fee Check
-    if any(w in q for w in ["bus", "fee", "fare", "charge", "transport", "route", "stop", "boarding point"]):
+    if any(re.search(rf'\b{w}s?\b', q) for w in ["bus", "fee", "fare", "charge", "transport", "route", "stop", "boarding point"]):
         return "bus_fee"
     for route_stops in _BUS_FEES.values():
         for stop_entry in route_stops:
             stop = stop_entry.get("stop", "").lower()
-            if stop and any(word in q for word in stop.replace("(", " ").replace(")", " ").split() if len(word) >= 4):
+            if stop and any(re.search(rf'\b{word}\b', q) for word in stop.replace("(", " ").replace(")", " ").split() if len(word) >= 4):
                 return "bus_fee"
 
     # 5. Department Check
     department_keywords = ["department", "dept", "vision", "mission", "peo", "pso", "outcomes", "objectives", "about department", "about the department", "hod message", "message from hod"]
-    if any(w in q for w in department_keywords):
+    def _match_dept_kw(w, text):
+        if w in ["dept", "vision", "mission", "peo", "pso"]:
+            return bool(re.search(rf'\b{w}s?\b', text))
+        return bool(re.search(rf'\b{re.escape(w)}s?\b', text))
+        
+    if any(_match_dept_kw(w, q) for w in department_keywords):
         return "department"
 
     # 5a. Labs R23 Check — before college/general so "lab" queries are caught first
@@ -3731,7 +3847,7 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
         "oop lab", "java lab", "fsd", "dwdm", "bda lab", "tinkering",
         "phy lab", "chem lab", "english lab", "adsa", "dsa lab",
     ]
-    if any(w in q for w in labs_kw):
+    if any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in labs_kw):
         return "labs"
 
     # 5b. College Info Check
@@ -3745,12 +3861,12 @@ def classify_query_module(query: str, qa: QueryAnalysis) -> str:
         "club", "ieee", "nss", "ncc", "vision", "mission", "about college",
         "about nbkr", "intake", "ai&ds department", "aids department"
     ]
-    if any(w in q for w in college_kw):
+    if any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in college_kw):
         return "college"
 
     # 7. General Check
     general_keywords = ["hostel", "admission", "admissions", "course", "courses", "library", "placement", "placements", "portal", "intranet", "e-journal", "ejournal", "assessment", "exam duties", "login"]
-    if any(w in q for w in general_keywords):
+    if any(re.search(rf'\b{re.escape(w)}s?\b', q) for w in general_keywords):
         return "general"
 
     return "unknown"
@@ -3781,6 +3897,172 @@ def log_failed_query(query: str, module: str, score: float):
             json.dump(logs, f, indent=2, ensure_ascii=False)
     except Exception as e:
         print(f"Error logging failed query: {e}")
+
+
+def web_search(query: str, num_results: int = 3) -> List[Dict[str, str]]:
+    url = "https://www.mojeek.com/search"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    try:
+        r = requests.get(url, params={'q': query}, headers=headers, timeout=10)
+        if r.status_code != 200:
+            return []
+        soup = BeautifulSoup(r.text, 'html.parser')
+        results = []
+        for h2 in soup.find_all('h2'):
+            a = h2.find('a')
+            if a:
+                title = a.get_text(strip=True)
+                href = a.get('href', '')
+                if not href or 'mojeek.com' in href or href.startswith('/'):
+                    continue
+                li = h2.find_parent('li')
+                snippet_el = li.find('p', class_='s') if li else None
+                snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+                results.append({
+                    'title': title,
+                    'url': href,
+                    'snippet': snippet
+                })
+                if len(results) >= num_results:
+                    break
+        return results
+    except Exception as e:
+        print(f"Web search error: {e}")
+        return []
+
+
+def handle_web_fallback(query: str, is_college_context: bool = False) -> Optional[str]:
+    search_results = []
+    if is_college_context:
+        # Simplify the query for Mojeek
+        s = query.lower()
+        s = re.sub(r'[^\w\s]', ' ', s)
+        ignore_words = {
+            "what", "who", "where", "when", "why", "how",
+            "is", "are", "was", "were", "am", "do", "does", "did", "have", "has", "had",
+            "the", "a", "an", "of", "in", "on", "at", "to", "for", "with", "by", "about",
+            "please", "tell", "me", "explain", "describe", "show", "find", "get",
+            "nbkrist", "nbkr", "college", "institute", "vidyanagar"
+        }
+        words = s.split()
+        filtered = [w for w in words if w not in ignore_words and len(w) > 1]
+        key_terms = filtered[:2]
+        if key_terms:
+            search_query = "NBKRIST " + " ".join(key_terms)
+        else:
+            search_query = "NBKRIST"
+
+        search_results = web_search(search_query, num_results=3)
+        if not search_results:
+            # Fallback to general search on the query
+            search_results = web_search("NBKRIST", num_results=3)
+
+    if is_college_context:
+        if search_results:
+            header_label = "🌐 Web Search Result"
+            context_lines = []
+            for i, res in enumerate(search_results):
+                snippet = res['snippet'][:300]
+                context_lines.append(f"Result {i+1}:\nTitle: {res['title']}\nURL: {res['url']}\nSnippet: {snippet}\n")
+            context_text = "\n".join(context_lines)[:1200]
+
+            system_prompt = (
+                "You are the official AI Assistant for N.B.K.R. Institute of Science & Technology (NBKRIST). "
+                "Your task is to answer the user's question using the provided web search results. "
+                "If the search results contain relevant information, synthesize a helpful, comprehensive, and natural response "
+                "in the style of ChatGPT. Prioritize details about NBKRIST if queried.\n"
+                "IMPORTANT rules:\n"
+                "1. Answer in a professional, warm, and natural tone.\n"
+                "2. You MUST format your response strictly as clean HTML. Use <p>, <ul>, <li>, <strong>, and <em>. Do NOT use markdown notation like **, *, #, etc.\n"
+                "3. Incorporate clickable HTML links for any sources or references using <a href=\"...\" target=\"_blank\" style=\"color:#1a237e;text-decoration:underline;\">Link Text</a>. Use descriptive link text.\n"
+                "4. Keep the response concise but informative.\n"
+                "5. If the search results do not contain the answer, politely state that you could not find the information."
+            )
+            user_prompt = f"User Question: {query}\n\nSearch Results:\n{context_text}"
+        else:
+            header_label = "🌐 Web Fallback Result"
+            # No web search results available, call LLM directly for college info using its internal knowledge
+            system_prompt = (
+                "You are the official AI Assistant for N.B.K.R. Institute of Science & Technology (NBKRIST). "
+                "Answer the user's question about NBKRIST comprehensively, warm, and naturally in the style of ChatGPT using your knowledge.\n"
+                "IMPORTANT rules:\n"
+                "1. Answer in a professional, warm, and natural tone.\n"
+                "2. You MUST format your response strictly as clean HTML. Use <p>, <ul>, <li>, <strong>, and <em>. Do NOT use markdown notation like **, *, #, etc.\n"
+                "3. Keep the response concise but informative."
+            )
+            user_prompt = f"User Question: {query}"
+    else:
+        # General knowledge query - Direct LLM synthesize without web search
+        # Check scope first! If query contains no recognized academic/technical keywords → return scope message.
+        q_lower = query.lower()
+        academic_keywords = [
+            # CS, coding, data science, AI, ML, DL, NLP, IT
+            "ai", "ds", "ml", "dl", "nlp", "iot", "db", "sql", "git", "api", "web", "app",
+            "code", "coding", "program", "software", "hardware", "computer", "comput",
+            "network", "cloud", "cyber", "security", "data", "algorithm", "developer",
+            "neural", "robot", "automat", "tech", "machine learning", "deep learning",
+            "artificial intelligence", "data structure", "database", "programming",
+            # Math, science, academic
+            "math", "physic", "chem", "calculus", "algebra", "stat", "probability",
+            "matrix", "matrices", "derivative", "integrat", "geometr", "engineer",
+            "electronic", "electric", "mechanic", "civil", "academic", "course",
+            "class", "subject", "study", "exam", "syllabus", "curriculum", "lecture",
+            "learn", "teach", "educat", "school", "university", "college", "department",
+            # STEM topics (Astronomy, physics, engineering, academic concepts)
+            "moon", "space", "astronomy", "nuclear", "reactor", "gravity", "universe",
+            "atom", "molecule", "energy", "speed", "light", "star", "planet", "solar",
+            "concept", "definition", "formula", "theory", "experiment", "research",
+            "calculat", "design", "process", "system", "analysis", "project", "lab"
+        ]
+        has_academic = any(w in q_lower for w in academic_keywords)
+        if not has_academic:
+            return "I'm the NBKRIST AI&DS Department assistant. Please ask me something about the college, department, faculty, or academics."
+
+        header_label = "🤖 AI Response"
+        system_prompt = (
+            "You are a helpful, professional, and knowledgeable AI assistant. "
+            "Answer the user's question comprehensively and naturally in the style of ChatGPT.\n"
+            "IMPORTANT rules:\n"
+            "1. Answer in a professional, warm, and natural tone.\n"
+            "2. You MUST format your response strictly as clean HTML. Use <p>, <ul>, <li>, <strong>, and <em>. Do NOT use markdown notation like **, *, #, etc.\n"
+            "3. Keep the response concise but informative."
+        )
+        user_prompt = f"User Question: {query}"
+
+    url = "https://text.pollinations.ai/"
+    payload = {
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "model": "openai"
+    }
+
+    import time
+    for attempt in range(3):
+        try:
+            r = requests.post(url, json=payload, timeout=30)
+            if r.status_code == 200:
+                llm_response = r.text.strip()
+                if llm_response:
+                    return f"""
+<div style="margin:8px 0;font-family:'Segoe UI',sans-serif">
+  <div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 16px;border-radius:10px 10px 0 0">
+    <b>{header_label}</b>
+  </div>
+  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:16px 18px;font-size:13.5px;color:#333;line-height:1.7;overflow:hidden">
+    {llm_response}
+  </div>
+</div>"""
+            time.sleep(3 * (attempt + 1))
+        except Exception as e:
+            if attempt == 2:
+                print(f"Pollinations API error: {e}")
+            time.sleep(3 * (attempt + 1))
+    return None
+
 
 
 def get_response(query: str, conn_id: str = "default") -> str:
@@ -3868,10 +4150,27 @@ def get_response(query: str, conn_id: str = "default") -> str:
     module = classify_query_module(expanded, qa)
 
     if module == "unknown":
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        has_local_signal = any(w in expanded for w in local_signals)
+        
+        if not has_local_signal:
+            # Pure general knowledge -> skip search -> go straight to LLM directly
+            web_reply = handle_web_fallback(query, is_college_context=False)
+            if web_reply:
+                return web_reply
+            log_failed_query(query, "unknown", 0.0)
+            return "I couldn't find that information in the uploaded NBKRIST knowledge base."
+
+        threshold = UNKNOWN_FALLBACK_THRESHOLD if has_local_signal else 0.78
+
         fallback_results = hybrid_retrieve(qa, top_k=3)
-        if fallback_results and fallback_results[0][1] >= UNKNOWN_FALLBACK_THRESHOLD:
+        if fallback_results and fallback_results[0][1] >= threshold:
             best_doc, best_score = fallback_results[0]
             return _fallback_answer_card(best_doc)
+        # Web fallback
+        web_reply = handle_web_fallback(query, is_college_context=has_local_signal)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "unknown", fallback_results[0][1] if fallback_results else 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
@@ -3880,6 +4179,9 @@ def get_response(query: str, conn_id: str = "default") -> str:
         student_reply = handle_student_query(expanded)
         if student_reply is not None:
             return student_reply
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "student", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
@@ -3890,18 +4192,85 @@ def get_response(query: str, conn_id: str = "default") -> str:
         timetable_reply = handle_timetable_query(qa)
         if timetable_reply is not None:
             return timetable_reply
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "timetable", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "college":
-        return handle_college_query(expanded)
+        local_keywords = [
+            "program","course","undergraduate","postgraduate","ug","pg","b.tech","btech","m.tech","mba","mca",
+            "campus","facilit","infrastructure","hostel","library","gym","canteen","cafeteria","wi-fi","wifi","atm","bank",
+            "placement","recruiter","company","compan","hiring","package","tcs","infosys","wipro","cognizant",
+            "subject","syllabus","what do we study","what subjects",
+            "lab","laborator",
+            "career","job","opportunit","role","engineer","scientist","analyst","developer",
+            "skill","technolog","stack","python","react","docker","aws","langchain","rag","mcp",
+            "event","activit","techvyuha","inspiron","hackathon","symposium","workshop","fest",
+            "chapter","club","ieee","nss","ncc","csi","iste","coding club","cultural",
+            "department","ai&ds","aids","ai ds","artificial intelligence data science","dept overview","dept objective",
+            "full", "form", "meaning"
+        ]
+        def _match_keyword(w, text):
+            if w == "engineer":
+                return bool(re.search(r'\bengineers?\b', text))
+            if w in ["b.tech", "m.tech", "ai&ds", "ai ds"]:
+                return w in text
+            return bool(re.search(rf'\b{w}', text))
+            
+        is_local = any(_match_keyword(w, expanded) for w in local_keywords)
+        is_general_about = any(w in expanded for w in ["about the college", "about college", "overview", "about nbkrist", "about nbkr"])
+        
+        # Check if we have college signal
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        has_local_signal = any(w in expanded for w in local_signals)
+        
+        if not has_local_signal:
+            web_reply = handle_web_fallback(query, is_college_context=False)
+            if web_reply:
+                return web_reply
+            return "I couldn't find that information in the uploaded NBKRIST knowledge base."
+            
+        # Check for specific syllabus/subject queries
+        is_specific_syllabus = "syllabus" in expanded and any(w in expanded for w in ["ai", "artificial intelligence", "ml", "machine learning", "python", "java", "data science", "ds"])
+
+        has_web_kw = any(w in expanded for w in ["correspondence", "distance", "online"])
+        if (is_local or is_general_about) and not has_web_kw and not is_specific_syllabus:
+            return handle_college_query(expanded)
+        else:
+            web_reply = handle_web_fallback(query, is_college_context=True)
+            if web_reply:
+                return web_reply
+            return handle_college_query(expanded)
 
     if module == "department":
-        return build_department_info_card()
+        results = retrieve_filtered(qa, "department")
+        if results and results[0][1] >= CONFIDENCE_THRESHOLD:
+            doc = results[0][0]
+            text = doc.get("display_text", doc["text"])
+            body_html = f'<p style="padding:12px 16px;font-size:13.5px;color:#333;line-height:1.7;margin:0;white-space:pre-line">{text}</p>'
+            return f"""
+<div style="margin:8px 0;font-family:'Segoe UI',sans-serif">
+  <div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:10px 16px;border-radius:10px 10px 0 0">
+    <b>ℹ️ Department Information</b>
+  </div>
+  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
+    {body_html}
+  </div>
+</div>"""
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
+        log_failed_query(query, "department", results[0][1] if results else 0.0)
+        return "I don't know the answer to that question."
 
     if module == "services":
         if "attendance" in expanded:
             return _attendance_card()
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "services", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
@@ -3909,6 +4278,9 @@ def get_response(query: str, conn_id: str = "default") -> str:
         labs_reply = handle_labs_query(expanded)
         if labs_reply is not None:
             return labs_reply
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "labs", 0.0)
         return "I couldn't find that information in the uploaded NBKR AI&DS R23 curriculum."
 
@@ -3916,35 +4288,73 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if module == "faculty_overview_all":
         return render_faculty_table(_FACULTY_DATA)
 
-    # ── faculty_overview_single: name mentioned → 3-column table, single row ──
+    # ── faculty_overview_single: name mentioned → single profile card ──
     if module == "faculty_overview_single":
         fac = _find_faculty_by_name(expanded)
         if fac:
-            return render_faculty_table([fac])
-        # Fallback: show full table if name not resolved
+            return build_faculty_card(fac, include_timetable=False)
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         return render_faculty_table(_FACULTY_DATA)
 
     # ── Legacy alias kept for any external callers ──
     if module == "faculty_timetable_list":
         return render_faculty_table(_FACULTY_DATA)
 
+    # ── Specific faculty profile sub-module ──
+    if module == "faculty_profile":
+        fac = _find_faculty_by_name(expanded)
+        if not fac and any(w in expanded for w in ["hod","head of department","head of dept"]):
+            fac = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
+        if fac:
+            return build_faculty_card(fac, include_timetable=False)
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
+        log_failed_query(query, "faculty_profile", 0.0)
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
+
+    # ── Specific faculty profile + timetable sub-module ──
+    if module == "faculty_both":
+        fac = _find_faculty_by_name(expanded)
+        if not fac and any(w in expanded for w in ["hod","head of department","head of dept"]):
+            fac = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
+        if fac:
+            return build_faculty_card(fac, include_timetable=True)
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
+        log_failed_query(query, "faculty_both", 0.0)
+        return "I couldn't find that information in the uploaded NBKRIST knowledge base."
+
     # ── Detail view: exact button-click phrase "timetable of <name>" ──
     if module == "faculty_timetable":
         fac = _find_faculty_by_name(expanded)
+        if not fac and any(w in expanded for w in ["hod","head of department","head of dept"]):
+            fac = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
         if fac:
             tt = fac.get("timetable", {})
             if tt:
                 return build_faculty_timetable_html(fac)
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "faculty_timetable", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     # ── Detail view: exact button-click phrase "leisure hours of <name>" ──
     if module == "faculty_leisure":
         fac = _find_faculty_by_name(expanded)
+        if not fac and any(w in expanded for w in ["hod","head of department","head of dept"]):
+            fac = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
         if fac:
             tt = fac.get("timetable", {})
             if tt:
                 return build_faculty_leisure_html(fac)
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "faculty_leisure", 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
@@ -3968,13 +4378,16 @@ def get_response(query: str, conn_id: str = "default") -> str:
             if matches:
                 return build_bus_fee_card([matches[0]], location)
 
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "bus_fee", results[0][1] if results else 0.0)
         return "I couldn't find that information in the uploaded NBKRIST knowledge base."
 
     if module == "faculty":
         if any(w in expanded for w in ["hod","head of department","head of dept"]):
             hod = next((f for f in _FACULTY_DATA if "head" in f.get("designation","").lower()), None)
-            if hod: return build_faculty_card(hod)
+            if hod: return build_faculty_card(hod, include_timetable=False)
 
         # 2. Check list
         list_signals = {"list","all","show","every","members","staff","teachers","lecturers","how many"}
@@ -3986,7 +4399,7 @@ def get_response(query: str, conn_id: str = "default") -> str:
 
         # 3. Direct name match
         direct = _find_faculty_by_name(query)
-        if direct: return build_faculty_card(direct)
+        if direct: return build_faculty_card(direct, include_timetable=False)
 
         # 4. Filtered semantic search
         results = retrieve_filtered(qa, "faculty")
@@ -3994,7 +4407,7 @@ def get_response(query: str, conn_id: str = "default") -> str:
             doc = results[0][0]
             fac_name = doc.get("name", "")
             match = next((f for f in _FACULTY_DATA if f.get("name","").lower() == fac_name.lower()), None)
-            if match: return build_faculty_card(match)
+            if match: return build_faculty_card(match, include_timetable=False)
 
         # 5. Specialisation queries
         spec_map = {
@@ -4012,26 +4425,10 @@ def get_response(query: str, conn_id: str = "default") -> str:
                            if any(lm in f.get("specialization","").lower() for lm in lemmas)]
                 if matched: return build_specialization_table(spec_label, matched)
 
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "faculty", results[0][1] if results else 0.0)
-        return "I don't know the answer to that question."
-
-    if module == "department":
-        results = retrieve_filtered(qa, "department")
-        if results and results[0][1] >= CONFIDENCE_THRESHOLD:
-            doc = results[0][0]
-            text = doc.get("display_text", doc["text"])
-            body_html = f'<p style="padding:12px 16px;font-size:13.5px;color:#333;line-height:1.7;margin:0;white-space:pre-line">{text}</p>'
-            return f"""
-<div style="margin:8px 0;font-family:'Segoe UI',sans-serif">
-  <div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:10px 16px;border-radius:10px 10px 0 0">
-    <b>ℹ️ Department Information</b>
-  </div>
-  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
-    {body_html}
-  </div>
-</div>"""
-
-        log_failed_query(query, "department", results[0][1] if results else 0.0)
         return "I don't know the answer to that question."
 
     if module == "circular":
@@ -4063,21 +4460,34 @@ def get_response(query: str, conn_id: str = "default") -> str:
         if any(w in q_lower for w in ["all notices", "list notices", "notices", "announcements", "circulars", "show circulars"]):
             return build_all_circulars_table()
 
+        web_reply = handle_web_fallback(query, is_college_context=True)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "circular", results[0][1] if results else 0.0)
         return "I don't know the answer to that question."
 
     if module == "general":
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        has_local_signal = any(w in expanded for w in local_signals)
+        threshold = CONFIDENCE_THRESHOLD if has_local_signal else 0.78
+
         results = hybrid_retrieve(qa, top_k=TOP_K)
-        if results and results[0][1] >= CONFIDENCE_THRESHOLD:
+        if results and results[0][1] >= threshold:
             doc = results[0][0]
             text = doc["text"]
             key = doc.get("key", "Information")
             val = text.replace(f"{key}: ", "")
             return _info_card(f"ℹ️ {key.title()}", [(key.upper(), val)])
 
+        web_reply = handle_web_fallback(query, is_college_context=has_local_signal)
+        if web_reply:
+            return web_reply
         log_failed_query(query, "general", results[0][1] if results else 0.0)
         return "I don't know the answer to that question."
 
+    web_reply = handle_web_fallback(query, is_college_context=False)
+    if web_reply:
+        return web_reply
     log_failed_query(query, module, 0.0)
     return "I don't know the answer to that question."
 
@@ -5547,6 +5957,9 @@ def build_college_info_card(section: str = "overview") -> str:
     section: overview | programs | campus | placements | department |
              events | skills | careers | labs | chapters
     """
+    global _COLLEGE_INFO
+    if not _COLLEGE_INFO:
+        load_college_info()
     ci = _COLLEGE_INFO
     if not ci:
         return '<p style="font-family:Segoe UI,sans-serif;color:#c62828">College info not loaded.</p>'
@@ -5708,25 +6121,50 @@ def handle_college_query(query: str) -> str:
     """Route college info queries to the right section card."""
     q = query.lower()
 
-    if any(w in q for w in ["program","course","undergraduate","postgraduate","ug","pg","b.tech","btech","m.tech","mba","mca"]):
+    def _has_word(words: List[str]) -> bool:
+        for w in words:
+            if w == "engineer":
+                if re.search(r'\bengineers?\b', q):
+                    return True
+            elif w == "compan":
+                if "company" in q or "companies" in q or "compan" in q:
+                    return True
+            elif w == "opportunit":
+                if "opportunity" in q or "opportunities" in q or "opportunit" in q:
+                    return True
+            elif w == "facilit":
+                if "facility" in q or "facilities" in q or "facilit" in q:
+                    return True
+            elif w == "laborator":
+                if "laboratory" in q or "laboratories" in q or "laborator" in q:
+                    return True
+            elif w in ["b.tech", "m.tech", "ai&ds", "ai ds"]:
+                if w in q:
+                    return True
+            else:
+                if re.search(rf'\b{w}s?\b', q):
+                    return True
+        return False
+
+    if _has_word(["program","course","undergraduate","postgraduate","ug","pg","b.tech","btech","m.tech","mba","mca"]):
         return build_college_info_card("programs")
-    if any(w in q for w in ["campus","facilit","infrastructure","hostel","library","gym","canteen","cafeteria","wi-fi","wifi","atm","bank"]):
+    if _has_word(["campus","facilit","infrastructure","hostel","library","gym","canteen","cafeteria","wi-fi","wifi","atm","bank"]):
         return build_college_info_card("campus")
-    if any(w in q for w in ["placement","recruiter","company","compan","hiring","package","tcs","infosys","wipro","cognizant"]):
+    if _has_word(["placement","recruiter","company","compan","hiring","package","tcs","infosys","wipro","cognizant"]):
         return build_college_info_card("placements")
-    if any(w in q for w in ["subject","syllabus","what do we study","what subjects"]):
+    if _has_word(["subject","syllabus","what do we study","what subjects"]):
         return build_college_info_card("subjects")
-    if any(w in q for w in ["lab","laborator"]):
+    if _has_word(["lab","laborator"]):
         return build_college_info_card("labs")
-    if any(w in q for w in ["career","job","opportunit","role","engineer","scientist","analyst","developer"]):
+    if _has_word(["career","job","opportunit","role","engineer","scientist","analyst","developer"]):
         return build_college_info_card("careers")
-    if any(w in q for w in ["skill","technolog","stack","python","react","docker","aws","langchain","rag","mcp"]):
+    if _has_word(["skill","technolog","stack","python","react","docker","aws","langchain","rag","mcp"]):
         return build_college_info_card("skills")
-    if any(w in q for w in ["event","activit","techvyuha","inspiron","hackathon","symposium","workshop","fest"]):
+    if _has_word(["event","activit","techvyuha","inspiron","hackathon","symposium","workshop","fest"]):
         return build_college_info_card("events")
-    if any(w in q for w in ["chapter","club","ieee","nss","ncc","csi","iste","coding club","cultural"]):
+    if _has_word(["chapter","club","ieee","nss","ncc","csi","iste","coding club","cultural"]):
         return build_college_info_card("chapters")
-    if any(w in q for w in ["department","ai&ds","aids","ai ds","artificial intelligence data science","dept overview","dept objective"]):
+    if _has_word(["department","ai&ds","aids","ai ds","artificial intelligence data science","dept overview","dept objective"]):
         return build_college_info_card("department")
     # Default: college overview
     return build_college_info_card("overview")
