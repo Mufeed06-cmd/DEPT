@@ -92,7 +92,7 @@
   "4th year section a monday": "4th Year Section A on Monday: 9:00-9:50: NDB (AVEN), 9:50-10:40: GenAI (MSPR), 10:50-11:40: DW (KP), 11:40-12:30: GS (STR), 1:30-2:20: EmpS (YS)",
   "4th year section a tuesday": "4th Year Section A on Tuesday: 9:00-9:50: GS (STR), 9:50-10:40: DW (KP), 10:50-11:40: GenAI (MSPR), 11:40-12:30: NDB (AVEN), 1:30-2:20: MS (UUK)",
   "4th year section a wednesday": "4th Year Section A on Wednesday: 9:00-9:50: MS (UUK), 9:50-10:40: NDB (AVEN), 10:50-11:40: EMPS (YS), 11:40-12:30: DW (KP), 1:30-2:20: GenAI (MSPR)",
-  "4th year section a thursday": "4th Year Section A on Thursday: 11:40-12:30: EmpS (YS), 1:30-2:20: MS (UUK), 2:20-4:00: PE Lab (SVC)",
+  "4th year section a thursday": "4th Year Section A on Thursday: 11:40-12:30: EmpS (YS), 1:30-2:20: MS (UUK), 9:00-11:40: PE Lab (SVC)",
   "4th year section a friday": "4th Year Section A on Friday: 9:00-12:30: MOOCS, 1:30-4:00: PROJECT",
   "4th year section a saturday": "4th Year Section A on Saturday: 9:00-12:30: MOOCS, 1:30-4:00: PROJECT",
   "4th year section b": "4th Year Section B timetable is available. You can ask about specific days or subjects.",
@@ -100,7 +100,7 @@
   "4th year section b monday": "4th Year Section B on Monday: 9:00-9:50: DW (KP), 9:50-10:40: EMPS (GM), 10:50-11:40: MS (MH), 11:40-12:30: NDB (AVEN), 1:30-2:20: GenAI (MSPR)",
   "4th year section b tuesday": "4th Year Section B on Tuesday: 9:00-9:50: GS (UC), 9:50-10:40: NDB (AVEN), 10:50-11:40: EMPS (GM), 11:40-12:30: DW (KP)",
   "4th year section b wednesday": "4th Year Section B on Wednesday: 9:00-9:50: MS (MH), 9:50-10:40: GenAI (MSPR), 10:50-11:40: GS (UC), 11:40-12:30: NDB (AVEN)",
-  "4th year section b thursday": "4th Year Section B on Thursday: 9:00-9:50: GenAI (MSPR), 9:50-10:40: DW (KP), 10:50-11:40: MS (MH), 11:40-12:30: EMPS (GM), 1:30-4:00: PE Lab (BSK)",
+  "4th year section b thursday": "4th Year Section B on Thursday: 9:00-9:50: GenAI (MSPR), 9:50-10:40: DW (KP), 10:50-11:40: MS (MH), 11:40-12:30: EMPS (GM), 2:20-4:00: PE Lab (BSK)",
   "4th year section b friday": "4th Year Section B on Friday: 9:00-12:30: MOOCS, 1:30-4:00: PROJECT",
   "4th year section b saturday": "4th Year Section B on Saturday: 9:00-12:30: MOOCS, 1:30-4:00: PROJECT"
 }
