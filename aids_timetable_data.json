@@ -186,100 +186,85 @@
     },
     "3rd_Year_Section_A": {
       "Monday": {
-        "9-12": "DL LAB (VVR, SMAM, PJTI)",
-        "2-3": "AIF (TVM)",
-        "3-4": "BDA (PPTH)",
-        "4-5": "DL (PJTI)",
-        "12-1": "L"
+        "9-10": "IQT (VSR)",
+        "10-11": "DWDM (VVR)",
+        "11-12": "EC (AA)",
+        "12-1": "ML (BRJ)",
+        "1-2": "DV (AN)"
       },
       "Tuesday": {
-        "9-10": "SNA (MNS)",
-        "10-11": "NLP (AVEN)",
-        "11-12": "DL (PJTI)",
-        "2-5": "BD and DV LAB (PPTH, SVC, AVEN)",
-        "12-1": "U"
+        "9-10": "MAS (PC)",
+        "10-11": "DW&DM Lab (VVR)",
+        "11-12": "DW&DM Lab (VVR)",
+        "12-1": "DW&DM Lab (VVR)",
+        "1-2": "EC (AA)"
       },
       "Wednesday": {
-        "9-10": "BDA (PPTH)",
-        "10-11": "DL (PJTI)",
-        "11-12": "NLP (AVEN)",
-        "2-3": "AWPS (VKTP)",
-        "3-4": "SNA (MNS)",
-        "4-5": "DL (PJTI)",
-        "12-1": "N"
+        "9-10": "Tk Lab (PNS)",
+        "10-11": "Tk Lab (PNS)",
+        "11-12": "IQT (VSR)",
+        "12-1": "N",
+        "1-4": "ML Lab (BRJ)"
       },
       "Thursday": {
-        "9-10": "AIF (TVM)",
-        "10-11": "SNA (MNS)",
-        "11-12": "BDA (PPTH)",
-        "2-3": "NLP (AVEN)",
-        "3-4": "AIF (TVM)",
-        "4-5": "AWPS (VKTP)",
-        "12-1": "C"
+        "9-10": "DWDM (VVR)",
+        "10-11": "DV (AN)",
+        "11-12": "FSD-II (TVR)",
+        "12-1": "FSD-II (TVR)",
+        "1-2": "MAS (PC)"
       },
       "Friday": {
-        "9-10": "NLP (AVEN)",
-        "10-11": "AIF (TVM)",
-        "11-12": "AWPS (VKTP)",
-        "2-3": "SNA (MNS)",
-        "3-4": "BDA (PPTH)",
-        "4-5": "TPW.IPR (ANR)",
-        "12-1": "H"
+        "9-10": "EC (AA)",
+        "10-11": "DV (AN)",
+        "11-12": "ML (BRJ)",
+        "12-1": "MAS (PC)",
+        "1-2": "DWDM (VVR)",
+        "2-3": "IQT (VSR)"
       },
       "Saturday": {
-        "9-10": "TPW.IPR (ANR)",
-        "10-12": "WORKSHOP (PJTI)",
-        "2-4": "SOFT SKILLS LAB (DAVI, PVS)",
-        "12-1": "BREAK",
-        "4-5": "IDS"
+        "12-1": "BREAK"
       }
     },
     "3rd_Year_Section_B": {
       "Monday": {
-        "9-12": "DL LAB (VVR, SMAM, PJTI)",
-        "2-3": "AIF (TVM)",
-        "3-4": "BDA (PPTH)",
-        "4-5": "DL (PJTI)",
-        "12-1": "L"
+        "9-10": "MAS (PC)",
+        "10-11": "ML (BRJ)",
+        "11-12": "TK Lab (BK)",
+        "12-1": "TK Lab (BK)",
+        "1-2": "DWDM (VVR)",
+        "2-3": "DV (KP)"
       },
       "Tuesday": {
-        "9-10": "SNA (MNS)",
-        "10-11": "NLP (AVEN)",
-        "11-12": "DL (PJTI)",
-        "2-5": "BD and DV LAB (PPTH, SVC, AVEN)",
-        "12-1": "U"
+        "9-10": "IQT (VSR)",
+        "10-11": "EC (KV)",
+        "11-12": "DV (KP)",
+        "12-1": "U",
+        "1-4": "DW&DM Lab (VVR)"
       },
       "Wednesday": {
-        "9-10": "BDA (PPTH)",
-        "10-11": "DL (PJTI)",
-        "11-12": "NLP (AVEN)",
-        "2-3": "AWPS (VKTP)",
-        "3-4": "SNA (MNS)",
-        "4-5": "DL (PJTI)",
-        "12-1": "N"
+        "9-10": "ML (BRJ)",
+        "10-11": "ML Lab (BRJ)",
+        "11-12": "ML Lab (BRJ)",
+        "12-1": "ML Lab (BRJ)",
+        "1-2": "MAS (PC)",
+        "2-3": "DWDM (VVR)"
       },
       "Thursday": {
-        "9-10": "AIF (TVM)",
-        "10-11": "SNA (MNS)",
-        "11-12": "BDA (PPTH)",
-        "2-3": "NLP (AVEN)",
-        "3-4": "AIF (TVM)",
-        "4-5": "AWPS (VKTP)",
-        "12-1": "C"
+        "9-10": "FSD Lab (TVR)",
+        "10-11": "FSD Lab (TVR)",
+        "11-12": "IQT (VSR)",
+        "12-1": "C",
+        "1-2": "EC (KV)"
       },
       "Friday": {
-        "9-10": "NLP (AVEN)",
-        "10-11": "AIF (TVM)",
-        "11-12": "AWPS (VKTP)",
-        "2-3": "SNA (MNS)",
-        "3-4": "BDA (PPTH)",
-        "4-5": "TPW.IPR (ANR)",
-        "12-1": "H"
+        "9-10": "EC (KV)",
+        "10-11": "DWDM (VVR)",
+        "11-12": "DV (KP)",
+        "12-1": "IQT (VSR)",
+        "1-2": "ML (BRJ)",
+        "2-3": "MAS (PC)"
       },
       "Saturday": {
-        "9-10": "TPW.IPR (ANR)",
-        "10-12": "WORKSHOP (PJTI)",
-        "2-4": "SOFT SKILLS LAB (DAVI, PVS)",
         "12-1": "BREAK"
       }
     },
@@ -358,29 +343,118 @@
     },
     "4th_Year_Section_A": {
       "Monday": {
-        "12-1": "L",
-        "9-12": "INTRODUCTION TO PROGRAMMING",
-        "1-2": "EP",
-        "2-3": "NGCS",
-        "3-4": "AI"
+        "9-10": "NDB (AVEN)",
+        "10-11": "GenAI (MSPR)",
+        "11-12": "DW (KP)",
+        "12-1": "GS (STR)",
+        "1-2": "EmpS (YS)"
       },
       "Tuesday": {
-        "12-1": "U",
-        "1-2": "NLP",
-        "2-4": "IDS LAB",
-        "9-12": "FULL STACK DEVELOPMENT LAB (VVR)"
+        "9-10": "GS (STR)",
+        "10-11": "DW (KP)",
+        "11-12": "GenAI (MSPR)",
+        "12-1": "NDB (AVEN)",
+        "1-2": "MS (UUK)"
       },
       "Wednesday": {
-        "12-1": "N"
+        "9-10": "MS (UUK)",
+        "10-11": "NDB (AVEN)",
+        "11-12": "EMPS (YS)",
+        "12-1": "DW (KP)",
+        "1-2": "GenAI (MSPR)"
       },
       "Thursday": {
-        "12-1": "C"
+        "9-12": "PE Lab (SVC)",
+        "12-1": "EmpS (YS)",
+        "1-2": "MS (UUK)"
       },
       "Friday": {
-        "12-1": "H"
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
       },
       "Saturday": {
-        "12-1": "BREAK"
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
+      }
+    },
+    "4th_Year_Section_B": {
+      "Monday": {
+        "9-10": "DW (KP)",
+        "10-11": "EMPS (GM)",
+        "11-12": "MS (MH)",
+        "12-1": "NDB (AVEN)",
+        "1-2": "GenAI (MSPR)"
+      },
+      "Tuesday": {
+        "9-10": "GS (UC)",
+        "10-11": "NDB (AVEN)",
+        "11-12": "EMPS (GM)",
+        "12-1": "DW (KP)",
+        "1-2": "U"
+      },
+      "Wednesday": {
+        "9-10": "MS (MH)",
+        "10-11": "GenAI (MSPR)",
+        "11-12": "GS (UC)",
+        "12-1": "NDB (AVEN)",
+        "1-2": "N"
+      },
+      "Thursday": {
+        "9-10": "GenAI (MSPR)",
+        "10-11": "DW (KP)",
+        "11-12": "MS (MH)",
+        "12-1": "EMPS (GM)",
+        "1-4": "PE Lab (BSK)"
+      },
+      "Friday": {
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
+      },
+      "Saturday": {
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
+      }
+    },
+    "4th_Year_IT": {
+      "Monday": {
+        "9-10": "ARVR (BKOT)",
+        "10-11": "DI",
+        "11-12": "EMPS (KV)",
+        "12-1": "MS (BV)",
+        "1-2": "L"
+      },
+      "Tuesday": {
+        "9-10": "AM (MHB)",
+        "10-11": "MS (BV)",
+        "11-12": "DI",
+        "12-1": "EMPS (KV)",
+        "1-2": "GS (STR)"
+      },
+      "Wednesday": {
+        "9-10": "MS (BV)",
+        "10-11": "AM (MHB)",
+        "11-12": "DL (AN)",
+        "12-1": "AR&VR (BKOT)",
+        "1-2": "N"
+      },
+      "Thursday": {
+        "9-12": "PE Lab (PNG)",
+        "12-1": "EmpS (KV)",
+        "1-2": "C"
+      },
+      "Friday": {
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
+      },
+      "Saturday": {
+        "9-12": "MOOCS",
+        "12-1": "MOOCS",
+        "1-4": "PROJECT"
       }
     }
   },
@@ -414,7 +488,33 @@
     "DL LAB": "Deep Learning Lab",
     "BD and DV LAB": "Big Data and Data Visualization Lab",
     "WORKSHOP": "Workshop",
-    "SOFT SKILLS LAB": "Soft Skills Lab"
+    "SOFT SKILLS LAB": "Soft Skills Lab",
+    "MAS": "Multi Agent System",
+    "ML": "Machine Learning",
+    "IQT": "Introduction to Quantum Computing",
+    "EC": "English for Communication/Competitive",
+    "DV": "Data Visualization",
+    "FSD Lab": "Full Stack Development Lab II",
+    "FSD-II": "Full Stack Development II",
+    "DW&DM Lab": "DW&DM Lab",
+    "ML Lab": "Machine Learning Lab",
+    "TK Lab": "Thinkering Lab",
+    "TKLab": "Thinkering Lab",
+    "DW": "Data Wrangling",
+    "GenAI": "Generative AI",
+    "NDB": "No SQL Database",
+    "GS": "Gender Sensitization",
+    "MS": "Management Science",
+    "EMPS": "Employability Skills",
+    "EmpS": "Employability Skills",
+    "PE Lab": "Prompt Engineering Laboratory",
+    "PE LAB": "Prompt Engineering Laboratory",
+    "MOOCS": "MOOCS",
+    "PROJECT": "Project",
+    "ARVR": "Augmented Reality and Virtual Reality",
+    "AR&VR": "Augmented Reality and Virtual Reality",
+    "AM": "Agile Methodology",
+    "DI": "Digital Innovation"
   },
   "faculty": {
     "VHKR": "Harikrishna Reddy V",
@@ -449,6 +549,23 @@
     "PJTI": "Pitti Jyothi",
     "PPTH": "Prasanth P",
     "VKTP": "Venkateswarlu Pellakuru",
-    "PVS": "PVS Faculty"
+    "PVS": "PVS Faculty",
+    "BRJ": "Rajani B",
+    "PC": "Chandrakala P",
+    "VSR": "Surendra Reddy V",
+    "KV": "Venkatesh K",
+    "KP": "Penchalaiah K",
+    "TVR": "Vamsi Vardhan Reddy T",
+    "AA": "Avinash A",
+    "AN": "Nagaraju A",
+    "PNS": "Nataraja Suresh M",
+    "UC": "Chandrabashker U",
+    "MH": "Haritha M",
+    "STR": "Teja Reddy S",
+    "UUK": "Udhay Kumar U",
+    "YS": "Saroja Y",
+    "BV": "Vasavi B",
+    "PNG": "Nagendra P",
+    "BSK": "BalaKrishna S"
   }
 }
