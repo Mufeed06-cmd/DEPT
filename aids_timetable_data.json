@@ -186,87 +186,72 @@
     },
     "3rd_Year_Section_A": {
       "Monday": {
-        "9-10": "IQT (VSR)",
-        "10-11": "DWDM (VVR)",
-        "11-12": "EC (AA)",
-        "12-1": "ML (BRJ)",
-        "1-2": "DV (AN)"
+        "9:00-9:50": "IQT (VSR)",
+        "9:50-10:40": "DWDM (VVR)",
+        "10:50-11:40": "EC (AA)",
+        "11:40-12:30": "ML (BRJ)",
+        "1:30-2:20": "DV (AN)"
       },
       "Tuesday": {
-        "9-10": "MAS (PC)",
-        "10-11": "DW&DM Lab (VVR)",
-        "11-12": "DW&DM Lab (VVR)",
-        "12-1": "DW&DM Lab (VVR)",
-        "1-2": "EC (AA)"
+        "9:00-9:50": "MAS (PC)",
+        "9:50-11:40": "DW&DM Lab (VVR)",
+        "1:30-2:20": "EC (AA)"
       },
       "Wednesday": {
-        "9-10": "Tk Lab (PNS)",
-        "10-11": "Tk Lab (PNS)",
-        "11-12": "IQT (VSR)",
-        "12-1": "N",
-        "1-4": "ML Lab (BRJ)"
+        "9:00-10:50": "Tk Lab (PNS)",
+        "10:50-11:40": "IQT (VSR)",
+        "1:30-4:00": "ML Lab (BRJ)"
       },
       "Thursday": {
-        "9-10": "DWDM (VVR)",
-        "10-11": "DV (AN)",
-        "11-12": "FSD-II (TVR)",
-        "12-1": "FSD-II (TVR)",
-        "1-2": "MAS (PC)"
+        "9:00-9:50": "DWDM (VVR)",
+        "9:50-10:40": "DV (AN)",
+        "10:50-12:30": "FSD-II (TVR)",
+        "1:30-2:20": "MAS (PC)"
       },
       "Friday": {
-        "9-10": "EC (AA)",
-        "10-11": "DV (AN)",
-        "11-12": "ML (BRJ)",
-        "12-1": "MAS (PC)",
-        "1-2": "DWDM (VVR)",
-        "2-3": "IQT (VSR)"
+        "9:00-9:50": "EC (AA)",
+        "9:50-10:40": "DV (AN)",
+        "10:50-11:40": "ML (BRJ)",
+        "11:40-12:30": "MAS (PC)",
+        "1:30-2:20": "DWDM (VVR)",
+        "2:20-3:10": "IQT (VSR)"
       },
-      "Saturday": {
-        "12-1": "BREAK"
-      }
+      "Saturday": {}
     },
     "3rd_Year_Section_B": {
       "Monday": {
-        "9-10": "MAS (PC)",
-        "10-11": "ML (BRJ)",
-        "11-12": "TK Lab (BK)",
-        "12-1": "TK Lab (BK)",
-        "1-2": "DWDM (VVR)",
-        "2-3": "DV (KP)"
+        "9:00-9:50": "MAS (PC)",
+        "9:50-10:40": "ML (BRJ)",
+        "10:50-12:30": "TK Lab (BK)",
+        "1:30-2:20": "DWDM (VVR)",
+        "2:20-3:10": "DV (KP)"
       },
       "Tuesday": {
-        "9-10": "IQT (VSR)",
-        "10-11": "EC (KV)",
-        "11-12": "DV (KP)",
-        "12-1": "U",
-        "1-4": "DW&DM Lab (VVR)"
+        "9:00-9:50": "IQT (VSR)",
+        "9:50-10:40": "EC (KV)",
+        "10:50-11:40": "DV (KP)",
+        "1:30-4:00": "DW&DM Lab (VVR)"
       },
       "Wednesday": {
-        "9-10": "ML (BRJ)",
-        "10-11": "ML Lab (BRJ)",
-        "11-12": "ML Lab (BRJ)",
-        "12-1": "ML Lab (BRJ)",
-        "1-2": "MAS (PC)",
-        "2-3": "DWDM (VVR)"
+        "9:00-9:50": "ML (BRJ)",
+        "9:50-11:40": "ML Lab (BRJ)",
+        "1:30-2:20": "MAS (PC)",
+        "2:20-3:10": "DWDM (VVR)"
       },
       "Thursday": {
-        "9-10": "FSD Lab (TVR)",
-        "10-11": "FSD Lab (TVR)",
-        "11-12": "IQT (VSR)",
-        "12-1": "C",
-        "1-2": "EC (KV)"
+        "9:00-10:50": "FSD Lab (TVR)",
+        "10:50-11:40": "IQT (VSR)",
+        "1:30-2:20": "EC (KV)"
       },
       "Friday": {
-        "9-10": "EC (KV)",
-        "10-11": "DWDM (VVR)",
-        "11-12": "DV (KP)",
-        "12-1": "IQT (VSR)",
-        "1-2": "ML (BRJ)",
-        "2-3": "MAS (PC)"
+        "9:00-9:50": "EC (KV)",
+        "9:50-10:40": "DWDM (VVR)",
+        "10:50-11:40": "DV (KP)",
+        "11:40-12:30": "IQT (VSR)",
+        "1:30-2:20": "ML (BRJ)",
+        "2:20-3:10": "MAS (PC)"
       },
-      "Saturday": {
-        "12-1": "BREAK"
-      }
+      "Saturday": {}
     },
     "2nd_Year_Section_B": {
       "Monday": {
@@ -311,150 +296,76 @@
         "12-1": "BREAK"
       }
     },
-    "4_Year_Section_A": {
-      "Monday": {
-        "12-1": "L",
-        "9-12": "LAC",
-        "1-2": "BEEE"
-      },
-      "Tuesday": {
-        "12-1": "U",
-        "3-4": "IDS"
-      },
-      "Wednesday": {
-        "12-1": "N",
-        "1-2": "INTRODUCTION TO PROGRAMMING",
-        "9-10": "NGCS",
-        "11-12": "ENGINEERING GRAPHICS"
-      },
-      "Thursday": {
-        "12-1": "C",
-        "3-4": "EP",
-        "10-12": "EEE WS"
-      },
-      "Friday": {
-        "12-1": "H",
-        "1-4": "EEE WS",
-        "9-10": "AI"
-      },
-      "Saturday": {
-        "12-1": "BREAK"
-      }
-    },
     "4th_Year_Section_A": {
       "Monday": {
-        "9-10": "NDB (AVEN)",
-        "10-11": "GenAI (MSPR)",
-        "11-12": "DW (KP)",
-        "12-1": "GS (STR)",
-        "1-2": "EmpS (YS)"
+        "9:00-9:50": "NDB (AVEN)",
+        "9:50-10:40": "GenAI (MSPR)",
+        "10:50-11:40": "DW (KP)",
+        "11:40-12:30": "GS (STR)",
+        "1:30-2:20": "EmpS (YS)"
       },
       "Tuesday": {
-        "9-10": "GS (STR)",
-        "10-11": "DW (KP)",
-        "11-12": "GenAI (MSPR)",
-        "12-1": "NDB (AVEN)",
-        "1-2": "MS (UUK)"
+        "9:00-9:50": "GS (STR)",
+        "9:50-10:40": "DW (KP)",
+        "10:50-11:40": "GenAI (MSPR)",
+        "11:40-12:30": "NDB (AVEN)",
+        "1:30-2:20": "MS (UUK)"
       },
       "Wednesday": {
-        "9-10": "MS (UUK)",
-        "10-11": "NDB (AVEN)",
-        "11-12": "EMPS (YS)",
-        "12-1": "DW (KP)",
-        "1-2": "GenAI (MSPR)"
+        "9:00-9:50": "MS (UUK)",
+        "9:50-10:40": "NDB (AVEN)",
+        "10:50-11:40": "EMPS (YS)",
+        "11:40-12:30": "DW (KP)",
+        "1:30-2:20": "GenAI (MSPR)"
       },
       "Thursday": {
-        "9-12": "PE Lab (SVC)",
-        "12-1": "EmpS (YS)",
-        "1-2": "MS (UUK)"
+        "11:40-12:30": "EmpS (YS)",
+        "1:30-2:20": "MS (UUK)",
+        "2:20-4:00": "PE Lab (SVC)"
       },
       "Friday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
+        "9:00-12:30": "MOOCS",
+        "1:30-4:00": "PROJECT"
       },
       "Saturday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
+        "9:00-12:30": "MOOCS",
+        "1:30-4:00": "PROJECT"
       }
     },
     "4th_Year_Section_B": {
       "Monday": {
-        "9-10": "DW (KP)",
-        "10-11": "EMPS (GM)",
-        "11-12": "MS (MH)",
-        "12-1": "NDB (AVEN)",
-        "1-2": "GenAI (MSPR)"
+        "9:00-9:50": "DW (KP)",
+        "9:50-10:40": "EMPS (GM)",
+        "10:50-11:40": "MS (MH)",
+        "11:40-12:30": "NDB (AVEN)",
+        "1:30-2:20": "GenAI (MSPR)"
       },
       "Tuesday": {
-        "9-10": "GS (UC)",
-        "10-11": "NDB (AVEN)",
-        "11-12": "EMPS (GM)",
-        "12-1": "DW (KP)",
-        "1-2": "U"
+        "9:00-9:50": "GS (UC)",
+        "9:50-10:40": "NDB (AVEN)",
+        "10:50-11:40": "EMPS (GM)",
+        "11:40-12:30": "DW (KP)"
       },
       "Wednesday": {
-        "9-10": "MS (MH)",
-        "10-11": "GenAI (MSPR)",
-        "11-12": "GS (UC)",
-        "12-1": "NDB (AVEN)",
-        "1-2": "N"
+        "9:00-9:50": "MS (MH)",
+        "9:50-10:40": "GenAI (MSPR)",
+        "10:50-11:40": "GS (UC)",
+        "11:40-12:30": "NDB (AVEN)"
       },
       "Thursday": {
-        "9-10": "GenAI (MSPR)",
-        "10-11": "DW (KP)",
-        "11-12": "MS (MH)",
-        "12-1": "EMPS (GM)",
-        "1-4": "PE Lab (BSK)"
+        "9:00-9:50": "GenAI (MSPR)",
+        "9:50-10:40": "DW (KP)",
+        "10:50-11:40": "MS (MH)",
+        "11:40-12:30": "EMPS (GM)",
+        "1:30-4:00": "PE Lab (BSK)"
       },
       "Friday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
+        "9:00-12:30": "MOOCS",
+        "1:30-4:00": "PROJECT"
       },
       "Saturday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
-      }
-    },
-    "4th_Year_IT": {
-      "Monday": {
-        "9-10": "ARVR (BKOT)",
-        "10-11": "DI",
-        "11-12": "EMPS (KV)",
-        "12-1": "MS (BV)",
-        "1-2": "L"
-      },
-      "Tuesday": {
-        "9-10": "AM (MHB)",
-        "10-11": "MS (BV)",
-        "11-12": "DI",
-        "12-1": "EMPS (KV)",
-        "1-2": "GS (STR)"
-      },
-      "Wednesday": {
-        "9-10": "MS (BV)",
-        "10-11": "AM (MHB)",
-        "11-12": "DL (AN)",
-        "12-1": "AR&VR (BKOT)",
-        "1-2": "N"
-      },
-      "Thursday": {
-        "9-12": "PE Lab (PNG)",
-        "12-1": "EmpS (KV)",
-        "1-2": "C"
-      },
-      "Friday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
-      },
-      "Saturday": {
-        "9-12": "MOOCS",
-        "12-1": "MOOCS",
-        "1-4": "PROJECT"
+        "9:00-12:30": "MOOCS",
+        "1:30-4:00": "PROJECT"
       }
     }
   },

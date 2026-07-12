@@ -2106,7 +2106,11 @@ def load_knowledge_base() -> List[Dict]:
         subjects_map = tt.get("subjects", {})
         faculty_map  = tt.get("faculty", {})
         for section, days in tt.get("timetable",{}).items():
-            if "2nd_Year" in section:
+            if "4th_Year" in section:
+                year_label = "4th Year 1st Semester"
+            elif "3rd_Year" in section:
+                year_label = "3rd Year 1st Semester"
+            elif "2nd_Year" in section:
                 year_label = "2nd Year 2nd Semester"
             else:
                 year_label = "1st Year 1st Semester"
@@ -2380,6 +2384,23 @@ _SLOT_SPAN: Dict[str, List[str]] = {
     "2-5":   ["2-3","3-4","4-5"],
     "3-5":   ["3-4","4-5"],
 }
+_ATOMIC_COLS_3RD_4TH = ["9:00-9:50", "9:50-10:40", "10:50-11:40", "11:40-12:30", "12:30-1:30", "1:30-2:20", "2:20-3:10", "3:10-4:00"]
+_SLOT_SPAN_3RD_4TH = {
+    "9:00-9:50": ["9:00-9:50"],
+    "9:50-10:40": ["9:50-10:40"],
+    "10:50-11:40": ["10:50-11:40"],
+    "11:40-12:30": ["11:40-12:30"],
+    "12:30-1:30": ["12:30-1:30"],
+    "1:30-2:20": ["1:30-2:20"],
+    "2:20-3:10": ["2:20-3:10"],
+    "3:10-4:00": ["3:10-4:00"],
+    "9:00-10:50": ["9:00-9:50", "9:50-10:40"],
+    "9:50-12:30": ["9:50-10:40", "10:50-11:40", "11:40-12:30"],
+    "10:50-12:30": ["10:50-11:40", "11:40-12:30"],
+    "1:30-4:00": ["1:30-2:20", "2:20-3:10", "3:10-4:00"],
+    "2:20-4:00": ["2:20-3:10", "3:10-4:00"],
+    "9:00-12:30": ["9:00-9:50", "9:50-10:40", "10:50-11:40", "11:40-12:30"]
+}
 _LUNCH_VALS = {"L","U","N","C","H","BREAK","LUNCH"}
 
 def _is_lab(subj: str) -> bool:
@@ -2430,7 +2451,7 @@ def _render_cell(val: str, colspan: int) -> str:
             f'<div style="font-size:11.5px">{subj}</div>{fac_html}</td>')
 
 
-def _build_day_row(day_data: Dict, active_cols: List[str], day_label: str) -> str:
+def _build_day_row(day_data: Dict, active_cols: List[str], day_label: str, is_new_tt: bool = False) -> str:
     """
     Build one <tr> for a day.
     Uses colspan for multi-hour slots; skips atomic cols already consumed.
@@ -2442,8 +2463,11 @@ def _build_day_row(day_data: Dict, active_cols: List[str], day_label: str) -> st
 
     # Build a map: atomic_col → (val, colspan) for this day
     col_map: Dict[str, tuple] = {}
+    slot_span = _SLOT_SPAN_3RD_4TH if is_new_tt else _SLOT_SPAN
+    lunch_col = "12:30-1:30" if is_new_tt else "12-1"
+
     for slot_key, val in day_data.items():
-        covered = _SLOT_SPAN.get(slot_key, [slot_key])
+        covered = slot_span.get(slot_key, [slot_key])
         # Only count cols that are active
         active_covered = [c for c in covered if c in active_cols]
         if not active_covered:
@@ -2457,7 +2481,7 @@ def _build_day_row(day_data: Dict, active_cols: List[str], day_label: str) -> st
     cells = f'<td {day_th}>{day_label}</td>'
     for col in active_cols:
         if col not in col_map:
-            if col == "12-1":
+            if col == lunch_col:
                 lunch_letters = {"Mon": "L", "Tue": "U", "Wed": "N", "Thu": "C", "Fri": "H", "Sat": "BREAK"}
                 cells += _render_cell(lunch_letters.get(day_label, "LUNCH"), 1)
             else:
@@ -2479,18 +2503,24 @@ def build_section_week_table(section_key: str) -> str:
         return (f'<p style="font-family:Segoe UI,sans-serif;color:#555">'
                 f'No timetable found for {section_key.replace("_"," ")}.</p>')
 
+    is_new_tt = "3rd_Year" in section_key or "4th_Year" in section_key
+    atomic_cols = _ATOMIC_COLS_3RD_4TH if is_new_tt else _ATOMIC_COLS
+    slot_span = _SLOT_SPAN_3RD_4TH if is_new_tt else _SLOT_SPAN
+    lunch_col = "12:30-1:30" if is_new_tt else "12-1"
+
     # Determine which atomic columns actually have data (drop empty trailing cols)
     used_atomic: set = set()
     for day_data in data.values():
         for slot_key in day_data:
-            for ac in _SLOT_SPAN.get(slot_key, [slot_key]):
+            for ac in slot_span.get(slot_key, [slot_key]):
                 used_atomic.add(ac)
 
-    # Keep only atomic cols that are used, in fixed order, always keeping 12-1
-    active_cols = [c for c in _ATOMIC_COLS if (c == "12-1" or c in used_atomic)]
+    # Keep only atomic cols that are used, in fixed order, always keeping lunch_col
+    active_cols = [c for c in atomic_cols if (c == lunch_col or c in used_atomic)]
 
     label      = section_key.replace("_", " ")
-    year_label = ("3rd Year · 2nd Semester" if "3rd_Year" in section_key else
+    year_label = ("4th Year · 1st Semester" if "4th_Year" in section_key else
+                  "3rd Year · 1st Semester" if "3rd_Year" in section_key else
                   "2nd Year · 2nd Semester" if "2nd_Year" in section_key else
                   "1st Year · 1st Semester")
 
@@ -2501,7 +2531,8 @@ def build_section_week_table(section_key: str) -> str:
                 'font-size:11px;font-weight:700;background:#555;color:#fff;'
                 'width:60px;min-width:60px"')
     col_headers = "".join(
-        f'<th {th_lunch}>12 – 1<br><span style="font-size:9px;font-weight:400;opacity:0.85">Lunch Break</span></th>' if c == "12-1" else
+        f'<th {th_lunch}>12:30 – 1:30<br><span style="font-size:9px;font-weight:400;opacity:0.85">Lunch Break</span></th>' if (is_new_tt and c == "12:30-1:30") else
+        f'<th {th_lunch}>12 – 1<br><span style="font-size:9px;font-weight:400;opacity:0.85">Lunch Break</span></th>' if (not is_new_tt and c == "12-1") else
         f'<th {th}>{c.replace("-"," – ")}</th>'
         for c in active_cols
     )
@@ -2511,7 +2542,7 @@ def build_section_week_table(section_key: str) -> str:
     rows = ""
     for day in DAYS_ORDER:
       day_data = data.get(day, {})
-      rows += _build_day_row(day_data, active_cols, day[:3])
+      rows += _build_day_row(day_data, active_cols, day[:3], is_new_tt)
 
     # Legend
     subj_map = _TT_DATA.get("subjects", {})
@@ -2581,19 +2612,26 @@ def build_day_table(section_key, day):
     if not data:
         return (f'<p style="font-family:Segoe UI,sans-serif;color:#555">'
                 f'No classes for {section_key.replace("_"," ")} on {day}.</p>')
-    slot_order_map = {s: i for i, s in enumerate(_ATOMIC_COLS)}
+    is_new_tt = "3rd_Year" in section_key or "4th_Year" in section_key
+    atomic_cols = _ATOMIC_COLS_3RD_4TH if is_new_tt else _ATOMIC_COLS
+    slot_span = _SLOT_SPAN_3RD_4TH if is_new_tt else _SLOT_SPAN
+    
+    slot_order_map = {s: i for i, s in enumerate(atomic_cols)}
     slots = sorted(data.keys(), key=lambda s: slot_order_map.get(
-        _SLOT_SPAN.get(s, [s])[0], 99))
+        slot_span.get(s, [s])[0], 99))
     label = section_key.replace("_"," ")
     th = ('style="border:1px solid #bbb;padding:8px 12px;text-align:center;'
           'font-size:12px;font-weight:700;background:#2d3a6b;color:#fff"')
     rows = ""
     for slot in slots:
         val = data[slot]
-        covered = _SLOT_SPAN.get(slot, [slot])
-        active  = [c for c in covered if c in _ATOMIC_COLS]
+        covered = slot_span.get(slot, [slot])
+        active  = [c for c in covered if c in atomic_cols]
         span    = len(active)
-        label_s = f'{active[0].replace("-"," – ")} – {active[-1].split("-")[1]}:00' if span > 1 else slot.replace("-"," – ")
+        if is_new_tt:
+            label_s = f'{active[0].split("-")[0]} – {active[-1].split("-")[1]}'
+        else:
+            label_s = f'{active[0].replace("-"," – ")} – {active[-1].split("-")[1]}:00' if span > 1 else slot.replace("-"," – ")
         rows += (f'<tr><td style="border:1px solid #bbb;padding:8px 12px;font-weight:700;'
                  f'background:#e8eeff;color:#1a1a2e;font-size:12px;white-space:nowrap">'
                  f'{label_s}</td>{_render_cell(val, 1)}</tr>')
@@ -2647,7 +2685,10 @@ def build_subject_table(subject_code, section_key=None):
 
 def build_all_sections_overview(year: int = 1):
     tt = _TT_DATA.get("timetable",{})
-    if year == 3:
+    if year == 4:
+        sections = ["4th_Year_Section_A","4th_Year_Section_B"]
+        title = "4th Year — All Sections Overview"
+    elif year == 3:
         sections = ["3rd_Year_Section_A","3rd_Year_Section_B"]
         title = "3rd Year — All Sections Overview"
     elif year == 2:
@@ -2864,7 +2905,7 @@ def build_yearwise_timetable_overview() -> str:
             "grad":  "linear-gradient(135deg,#4a148c,#7b1fa2)",
             "light": "#f3e5f5",
             "text":  "#4a148c",
-            "sections": ["A"],
+            "sections": ["A","B"],
             "key_fn": lambda s: f"4th_Year_Section_{s}",
         },
     ]
