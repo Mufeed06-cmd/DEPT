@@ -36,6 +36,15 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 
+try:
+    from playwright_scraper import scrape_for_query as playwright_scrape, _fetch_gateway
+    PLAYWRIGHT_AVAILABLE = True
+    print("[DEPT] Playwright scraper loaded OK")
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    _fetch_gateway = None
+    print("[WARNING] playwright_scraper not found, scraping fallback disabled")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Global state
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2650,6 +2659,12 @@ def build_day_table(section_key, day):
 </div>"""
 
 
+_TH_TT = 'style="border:1px solid #ddd;padding:8px 12px;text-align:left;font-size:12px;font-weight:700;background:#f3f4f6;color:#374151;"'
+_TD_TT = 'style="border:1px solid #ddd;padding:8px 12px;font-size:12px;color:#4b5563;"'
+_TD_TIME = 'style="border:1px solid #ddd;padding:8px 12px;font-size:12px;font-weight:700;color:#111827;background:#f9fafb;white-space:nowrap;"'
+_TD_EMPTY = 'style="border:1px solid #ddd;padding:8px 12px;font-size:12px;color:#9ca3af;text-align:center;"'
+
+
 def build_subject_table(subject_code, section_key=None):
     tt = _TT_DATA.get("timetable",{})
     # Search all sections across all years, or just the specified one
@@ -2663,7 +2678,7 @@ def build_subject_table(subject_code, section_key=None):
                     rows += (f'<tr><td {_TD_TT}>{sec_label}</td>'
                              f'<td {_TD_TT}>{day}</td>'
                              f'<td {_TD_TIME}>{slot}</td>'
-                             f'{_cell(val)}</tr>')
+                             f'{_render_cell(val, 1)}</tr>')
     if not rows:
         return f'<p style="font-family:Segoe UI,sans-serif">No <b>{subject_code}</b> classes found.</p>'
     full_name = SUBJECT_FULL.get(subject_code, subject_code)
@@ -3993,13 +4008,30 @@ def log_failed_query(query: str, module: str, score: float):
         print(f"Error logging failed query: {e}")
 
 
-def web_search(query: str, num_results: int = 3) -> List[Dict[str, str]]:
+def try_gateway_fallback(query: str) -> Optional[str]:
+    if PLAYWRIGHT_AVAILABLE and _fetch_gateway:
+        try:
+            gw_result = _fetch_gateway(query)
+            if gw_result:
+                if gw_result.strip().startswith("<div"):
+                    return f"""<div style='background:#f3f4f6;color:#1a1a1a;border:1px solid #8b5cf6;border-radius:8px;padding:16px;margin:8px 0;'>
+<p style='color:#8b5cf6;font-size:0.85em;margin:0 0 8px 0;font-weight:bold;'>📡 Retrieved from NBKR Knowledge Gateway</p>
+<div style='color:#1a1a1a;'>{gw_result}</div>
+</div>"""
+                else:
+                    return gw_result
+        except Exception as e:
+            print(f"[rag_chatbot] Gateway error: {e}")
+    return None
+
+
+def web_search(query: str, num_results: int = 3, timeout: int = 10) -> List[Dict[str, str]]:
     url = "https://www.mojeek.com/search"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     try:
-        r = requests.get(url, params={'q': query}, headers=headers, timeout=10)
+        r = requests.get(url, params={'q': query}, headers=headers, timeout=timeout)
         if r.status_code != 200:
             return []
         soup = BeautifulSoup(r.text, 'html.parser')
@@ -4028,6 +4060,12 @@ def web_search(query: str, num_results: int = 3) -> List[Dict[str, str]]:
 
 
 def handle_web_fallback(query: str, is_college_context: bool = False) -> Optional[str]:
+    # Check gateway first for college context queries
+    if is_college_context:
+        gw_reply = try_gateway_fallback(query)
+        if gw_reply:
+            return gw_reply
+
     search_results = []
     if is_college_context:
         # Simplify the query for Mojeek
@@ -4048,10 +4086,9 @@ def handle_web_fallback(query: str, is_college_context: bool = False) -> Optiona
         else:
             search_query = "NBKRIST"
 
-        search_results = web_search(search_query, num_results=3)
-        if not search_results:
-            # Fallback to general search on the query
-            search_results = web_search("NBKRIST", num_results=3)
+        # The goal: local/campus queries should resolve via gateway only, never hitting web search.
+        # Skip web search entirely for local-signal queries (timeout is effectively skipped/0).
+        search_results = []
 
     if is_college_context:
         if search_results:
@@ -4112,6 +4149,20 @@ def handle_web_fallback(query: str, is_college_context: bool = False) -> Optiona
         ]
         has_academic = any(w in q_lower for w in academic_keywords)
         if not has_academic:
+            print(f"[DEBUG] Reached playwright fallback check")
+            if PLAYWRIGHT_AVAILABLE:
+                try:
+                    scraped = playwright_scrape(query if isinstance(query, str) else str(query))
+                    if scraped:
+                        if scraped.strip().startswith("<div"):
+                            return f"""<div style='background:#f3f4f6;color:#1a1a1a;border:1px solid #8b5cf6;border-radius:8px;padding:16px;margin:8px 0;'>
+<p style='color:#8b5cf6;font-size:0.85em;margin:0 0 8px 0;font-weight:bold;'>📡 Retrieved from NBKR Knowledge Gateway</p>
+<div style='color:#1a1a1a;'>{scraped}</div>
+</div>"""
+                        else:
+                            return scraped
+                except Exception as _pw_err:
+                    print(f"[rag_chatbot] Playwright fallback error: {_pw_err}")
             return "I'm the NBKRIST AI&DS Department assistant. Please ask me something about the college, department, faculty, or academics."
 
         header_label = "🤖 AI Response"
@@ -4160,6 +4211,7 @@ def handle_web_fallback(query: str, is_college_context: bool = False) -> Optiona
 
 
 def get_response(query: str, conn_id: str = "default") -> str:
+    print(f"[DEBUG] Received query: {query!r}")
     query = query.strip()
     if not query:
         return _info_card("⚠️ Empty Query", [("Tip","Please type a question.")])
@@ -4221,6 +4273,18 @@ def get_response(query: str, conn_id: str = "default") -> str:
   </div>
  </div>"""
 
+    # Check gateway first for any queries matching the gateway signal keywords
+    gateway_signals = {
+        "breakfast", "canteen", "food", "mess", 
+        "workshop", "tcs", "nqt", "codevita", "circular", 
+        "ragging", "helpline", "scholarship", "merit",
+        "admission", "hostel"
+    }
+    if any(w in expanded for w in gateway_signals):
+        gw_reply = try_gateway_fallback(query)
+        if gw_reply:
+            return gw_reply
+
     # ── Static intents ────────────────────────────────────────────────────
     if intent == "greeting":
         return _info_card("👋 Hello! I'm the NBKR AI &amp; DS Assistant", [
@@ -4240,13 +4304,20 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if intent == "help":
         return _help_card()
 
+
+
     # Classify the target module — use expanded (typo-fixed) query
     module = classify_query_module(expanded, qa)
 
     if module == "unknown":
-        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular", "breakfast", "canteen", "food", "mess", "ragging", "helpline", "scholarship", "merit"}
         has_local_signal = any(w in expanded for w in local_signals)
         
+        if has_local_signal:
+            gw_reply = try_gateway_fallback(query)
+            if gw_reply:
+                return gw_reply
+
         if not has_local_signal:
             # Pure general knowledge -> skip search -> go straight to LLM directly
             web_reply = handle_web_fallback(query, is_college_context=False)
@@ -4317,9 +4388,14 @@ def get_response(query: str, conn_id: str = "default") -> str:
         is_general_about = any(w in expanded for w in ["about the college", "about college", "overview", "about nbkrist", "about nbkr"])
         
         # Check if we have college signal
-        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular", "breakfast", "canteen", "food", "mess", "ragging", "helpline", "scholarship", "merit"}
         has_local_signal = any(w in expanded for w in local_signals)
         
+        if has_local_signal:
+            gw_reply = try_gateway_fallback(query)
+            if gw_reply:
+                return gw_reply
+
         if not has_local_signal:
             web_reply = handle_web_fallback(query, is_college_context=False)
             if web_reply:
@@ -4641,8 +4717,14 @@ def get_response(query: str, conn_id: str = "default") -> str:
         return "I don't know the answer to that question."
 
     if module == "general":
-        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular"}
+        local_signals = {"nbkr", "nbkrist", "college", "institute", "vidyanagar", "nellore", "campus", "dept", "department", "syllabus", "curriculum", "timetable", "faculty", "hod", "principal", "admission", "placement", "bus", "fee", "hostel", "library", "labs", "attendance", "circular", "breakfast", "canteen", "food", "mess", "ragging", "helpline", "scholarship", "merit"}
         has_local_signal = any(w in expanded for w in local_signals)
+        
+        if has_local_signal:
+            gw_reply = try_gateway_fallback(query)
+            if gw_reply:
+                return gw_reply
+
         threshold = CONFIDENCE_THRESHOLD if has_local_signal else 0.78
 
         results = hybrid_retrieve(qa, top_k=TOP_K)
@@ -4663,6 +4745,20 @@ def get_response(query: str, conn_id: str = "default") -> str:
     if web_reply:
         return web_reply
     log_failed_query(query, module, 0.0)
+    print(f"[DEBUG] Reached playwright fallback check")
+    if PLAYWRIGHT_AVAILABLE:
+        try:
+            scraped = playwright_scrape(query if isinstance(query, str) else str(query))
+            if scraped:
+                if scraped.strip().startswith("<div"):
+                    return f"""<div style='background:#f3f4f6;color:#1a1a1a;border:1px solid #8b5cf6;border-radius:8px;padding:16px;margin:8px 0;'>
+<p style='color:#8b5cf6;font-size:0.85em;margin:0 0 8px 0;font-weight:bold;'>📡 Retrieved from NBKR Knowledge Gateway</p>
+<div style='color:#1a1a1a;'>{scraped}</div>
+</div>"""
+                else:
+                    return scraped
+        except Exception as _pw_err:
+            print(f"[rag_chatbot] Playwright fallback error: {_pw_err}")
     return "I don't know the answer to that question."
 
 
